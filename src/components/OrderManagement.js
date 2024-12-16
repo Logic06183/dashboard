@@ -14,7 +14,7 @@ const OrderManagement = ({ orders = [], onStatusChange }) => {  // Add default e
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm">
+    <div className="bg-white rounded-xl shadow-sm order-management">
       <div className="p-4 border-b">
         <h2 className="text-lg font-semibold">Active Orders</h2>
       </div>
@@ -32,7 +32,7 @@ const OrderManagement = ({ orders = [], onStatusChange }) => {  // Add default e
           </thead>
           <tbody className="divide-y divide-gray-200">
             {orders.map((order) => (
-              <tr key={order.orderId}>
+              <tr key={order.orderId} className="order-item">
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {new Date(order.orderTime).toLocaleTimeString()}
                 </td>
@@ -69,6 +69,13 @@ const OrderManagement = ({ orders = [], onStatusChange }) => {  // Add default e
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <button className="text-blue-600 hover:text-blue-800">
                     View Details
+                  </button>
+                  <CountdownTimer dueTime={order.dueTime} />
+                  <button
+                    onClick={() => onStatusChange(order.orderId, 'made')}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+                  >
+                    Mark as Made
                   </button>
                 </td>
               </tr>

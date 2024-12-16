@@ -39,7 +39,8 @@ const OrderForm = ({ onSubmit }) => {
     extraToppings: [],
     address: '',
     notes: '',
-    size: 'medium'
+    size: 'medium',
+    dueTime: ''
   });
 
   const handleSubmit = (e) => {
@@ -52,6 +53,7 @@ const OrderForm = ({ onSubmit }) => {
 
     onSubmit({
       ...orderData,
+      dueTime: orderData.dueTime,
       orderTime: new Date(),
       status: 'pending',
       orderId: Math.random().toString(36).substr(2, 9),
@@ -65,7 +67,8 @@ const OrderForm = ({ onSubmit }) => {
       extraToppings: [],
       address: '',
       notes: '',
-      size: 'medium'
+      size: 'medium',
+      dueTime: ''
     });
   };
 
@@ -183,6 +186,17 @@ const OrderForm = ({ onSubmit }) => {
             rows="2"
             value={orderData.notes}
             onChange={(e) => setOrderData({...orderData, notes: e.target.value})}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Due Time</label>
+          <input
+            type="datetime-local"
+            required
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            value={orderData.dueTime}
+            onChange={(e) => setOrderData({ ...orderData, dueTime: e.target.value })}
           />
         </div>
 

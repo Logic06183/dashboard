@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, Settings, Menu, Bell } from 'lucide-react';
 import NavItem from './NavItem';
@@ -9,6 +9,7 @@ import CustomersPage from './pages/CustomersPage';
 import OrdersPage from './pages/OrdersPage';
 import SettingsPage from './pages/SettingsPage';
 import useLocalStorage from '../hooks/useLocalStorage';
+import CountdownTimer from './CountdownTimer';
 
 const Dashboard = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
