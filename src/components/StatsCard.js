@@ -1,4 +1,3 @@
-// src/components/StatsCard.js
 import React from 'react';
 
 const StatsCard = ({ title, value, change }) => {
