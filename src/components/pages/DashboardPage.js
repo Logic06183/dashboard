@@ -4,13 +4,50 @@ import OrderManagement from '../OrderManagement';
 import CustomerTracking from '../CustomerTracking';
 import OrderForm from '../OrderForm';
 import CountdownTimer from '../CountdownTimer';
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, handleNewOrder }) => {
   const [sortedOrders, setSortedOrders] = useState([]);
+  const [analytics, setAnalytics] = useState({
+    hourlyOrders: [],
+    popularToppings: {},
+    averageOrderTime: 0,
+  });
 
   useEffect(() => {
     const sorted = [...orders].sort((a, b) => new Date(a.dueTime) - new Date(b.dueTime));
     setSortedOrders(sorted);
+  }, [orders]);
+
+  useEffect(() => {
+    // Calculate hourly order distribution
+    const hourlyData = Array(24).fill(0);
+    orders.forEach(order => {
+      const hour = new Date(order.orderTime).getHours();
+      hourlyData[hour]++;
+    });
+    
+    // Calculate popular toppings
+    const toppingsCount = {};
+    orders.forEach(order => {
+      order.extraToppings?.forEach(topping => {
+        toppingsCount[topping] = (toppingsCount[topping] || 0) + 1;
+      });
+    });
+
+    // Calculate average order completion time
+    const completedOrders = orders.filter(o => o.status === 'made');
+    const avgTime = completedOrders.reduce((acc, order) => {
+      const orderTime = new Date(order.orderTime);
+      const dueTime = new Date(order.dueTime);
+      return acc + (dueTime - orderTime);
+    }, 0) / (completedOrders.length || 1);
+
+    setAnalytics({
+      hourlyOrders: hourlyData.map((count, hour) => ({ hour, count })),
+      popularToppings: toppingsCount,
+      averageOrderTime: avgTime / (1000 * 60), // Convert to minutes
+    });
   }, [orders]);
 
   const getTotalSales = () => {
@@ -78,6 +115,70 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
               title="Average Order Value" 
               value={`R${orders.length ? (getTotalSales() / orders.length).toFixed(2) : '0'}`} 
             />
+            <StatsCard 
+              title="Avg Completion Time" 
+              value={`${Math.round(analytics.averageOrderTime)} min`} 
+            />
+          </div>
+
+          {/* Add Order Timeline */}
+          <div className="mb-8 bg-white p-6 rounded-xl shadow-sm">
+            <h3 className="text-lg font-semibold mb-4">Order Timeline</h3>
+            <div className="relative h-16">
+              {sortedOrders.map((order, index) => {
+                const timeStatus = getTimeStatus(order.dueTime);
+                const position = `${(index / sortedOrders.length) * 100}%`;
+                return (
+                  <div
+                    key={order.orderId}
+                    className={`absolute w-4 h-4 rounded-full transform -translate-x-2 cursor-pointer
+                      ${timeStatus === 'overdue' ? 'bg-red-500' :
+                        timeStatus === 'urgent' ? 'bg-orange-500' :
+                        timeStatus === 'warning' ? 'bg-yellow-500' : 'bg-green-500'}`}
+                    style={{ left: position, top: '50%' }}
+                    title={`${order.customerName} - Due: ${new Date(order.dueTime).toLocaleTimeString()}`}
+                  />
+                );
+              })}
+              <div className="absolute w-full h-1 bg-gray-200 top-1/2 transform -translate-y-1/2" />
+            </div>
+          </div>
+
+          {/* Add Analytics Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Hourly Order Distribution</h3>
+              <LineChart width={500} height={300} data={analytics.hourlyOrders}>
+                <XAxis dataKey="hour" />
+                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" />
+                <Tooltip />
+                <Line type="monotone" dataKey="count" stroke="#3b82f6" />
+              </LineChart>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm">
+              <h3 className="text-lg font-semibold mb-4">Popular Extra Toppings</h3>
+              <div className="space-y-2">
+                {Object.entries(analytics.popularToppings)
+                  .sort(([,a], [,b]) => b - a)
+                  .slice(0, 5)
+                  .map(([topping, count]) => (
+                    <div key={topping} className="flex items-center">
+                      <div className="flex-1">{topping}</div>
+                      <div className="ml-2 font-semibold">{count} orders</div>
+                      <div className="ml-2 w-32 bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-blue-500 h-2 rounded-full"
+                          style={{
+                            width: `${(count / Math.max(...Object.values(analytics.popularToppings))) * 100}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           </div>
 
           <div className="space-y-8">
