@@ -23,30 +23,30 @@ const CountdownTimer = ({ dueTime }) => {
     const due = new Date(dueTime);
     const diffMinutes = (due - now) / (1000 * 60);
 
-    if (diffMinutes < 0) return 'text-red-600 font-bold';
-    if (diffMinutes < 15) return 'text-orange-600 font-bold';
-    if (diffMinutes < 30) return 'text-yellow-600';
-    return 'text-green-600';
+    if (diffMinutes < 0) return 'text-red-500 font-bold animate-pulse';
+    if (diffMinutes < 5) return 'text-red-500 font-bold';
+    if (diffMinutes < 10) return 'text-primary-dark font-bold';
+    return 'text-primary';
   };
 
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-  
+
   useEffect(() => {
-    const timer = setTimeout(() => {
+    const timer = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
-    
-    return () => clearTimeout(timer);
-  });
+
+    return () => clearInterval(timer);
+  }, [dueTime]);
 
   if (!timeLeft) {
-    return <p className="text-red-600 font-bold">OVERDUE!</p>;
+    return <span className="text-red-500 font-bold animate-pulse">Time's up!</span>;
   }
 
   return (
-    <p className={getTimerColor()}>
+    <div className={`${getTimerColor()} font-mono text-sm`}>
       Time Remaining: {timeLeft.hours}h {timeLeft.minutes}m {timeLeft.seconds}s
-    </p>
+    </div>
   );
 };
 

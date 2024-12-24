@@ -3,7 +3,7 @@ import StatsCard from '../StatsCard';
 import OrderManagement from '../OrderManagement';
 import CustomerTracking from '../CustomerTracking';
 import OrderForm from '../OrderForm';
-import CountdownTimer from '../CountdownTimer';
+import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, handleNewOrder }) => {
@@ -12,14 +12,143 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
     hourlyOrders: [],
     popularToppings: {},
     averageOrderTime: 0,
+    dailyStats: {
+      totalOrders: 0,
+      totalSales: 0,
+      pendingOrders: 0,
+      avgOrderValue: 0,
+      avgCompletionTime: 0,
+      orderChange: 0
+    }
   });
+
+  // Calculate order stats
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Get today's orders
+    const todayOrders = orders.filter(order => {
+      const orderDate = new Date(order.orderTime);
+      return orderDate >= today;
+    });
+
+    // Get yesterday's orders
+    const yesterdayOrders = orders.filter(order => {
+      const orderDate = new Date(order.orderTime);
+      return orderDate >= yesterday && orderDate < today;
+    });
+
+    // Calculate order change percentage
+    const orderChange = yesterdayOrders.length > 0 
+      ? ((todayOrders.length - yesterdayOrders.length) / yesterdayOrders.length * 100).toFixed(1)
+      : 100;
+
+    // Calculate total sales
+    const calculateOrderTotal = (order) => {
+      // Base pizza prices
+      const PIZZA_PRICES = {
+        'Mish-Mash Pizza': 192.00,
+        'Pig in Paradise Pizza': 169.00,
+        'Margie Pizza': 149.00,
+        'The Champ Pizza': 179.00,
+        'Vegan Harvest Pizza': 189.00
+      };
+
+      // Extra toppings price
+      const EXTRA_TOPPING_PRICE = 15.00;
+
+      // Size adjustments
+      const SIZE_ADJUSTMENTS = {
+        'small': -20.00,
+        'medium': 0.00,
+        'large': 30.00
+      };
+
+      try {
+        if (!order.items || !Array.isArray(order.items)) {
+          console.error('Invalid order items structure:', order);
+          return 0;
+        }
+
+        const total = order.items.reduce((sum, item) => {
+          // Get base price for the pizza type
+          const basePrice = PIZZA_PRICES[item.pizzaType] || 0;
+          
+          // Calculate extra toppings cost
+          const extraToppingsPrice = (item.extraToppings?.length || 0) * EXTRA_TOPPING_PRICE;
+          
+          // Get size adjustment
+          const sizeAdjustment = SIZE_ADJUSTMENTS[item.size] || 0;
+          
+          // Get quantity (default to 1 if not specified)
+          const quantity = item.quantity || 1;
+
+          // Calculate total for this item
+          const itemTotal = (basePrice + extraToppingsPrice + sizeAdjustment) * quantity;
+
+          console.log(`Order item calculation for ${order.orderId}:`, {
+            pizzaType: item.pizzaType,
+            basePrice,
+            extraToppings: item.extraToppings?.length || 0,
+            extraToppingsPrice,
+            size: item.size,
+            sizeAdjustment,
+            quantity,
+            itemTotal
+          });
+
+          return sum + itemTotal;
+        }, 0);
+
+        return total;
+      } catch (error) {
+        console.error('Error calculating order total:', error, order);
+        return 0;
+      }
+    };
+
+    // Filter active orders (not ready or delivered)
+    const activeOrders = todayOrders.filter(o => !['ready', 'delivered'].includes(o.status));
+    
+    const totalSales = activeOrders.reduce((sum, order) => {
+      const orderTotal = calculateOrderTotal(order);
+      console.log(`Order ${order.orderId} total: R${orderTotal}`);
+      return sum + orderTotal;
+    }, 0);
+
+    console.log('Total sales for today:', totalSales);
+
+    const pendingOrders = activeOrders.filter(o => o.status === 'pending').length;
+    const avgOrderValue = activeOrders.length > 0 ? totalSales / activeOrders.length : 0;
+
+    // Calculate average completion time for active orders only
+    const inProgressOrders = activeOrders.filter(o => o.status !== 'pending');
+    const avgTime = inProgressOrders.reduce((acc, order) => {
+      const orderTime = new Date(order.orderTime);
+      const now = new Date();
+      return acc + (now - orderTime);
+    }, 0) / (inProgressOrders.length || 1);
+
+    setAnalytics(prev => ({
+      ...prev,
+      dailyStats: {
+        totalOrders: activeOrders.length,
+        totalSales,
+        pendingOrders,
+        avgOrderValue,
+        avgCompletionTime: Math.round(avgTime / (1000 * 60)), // Convert to minutes
+        orderChange: parseFloat(orderChange)
+      }
+    }));
+  }, [orders]);
 
   useEffect(() => {
     const sorted = [...orders].sort((a, b) => new Date(a.dueTime) - new Date(b.dueTime));
     setSortedOrders(sorted);
-  }, [orders]);
 
-  useEffect(() => {
     // Calculate hourly order distribution
     const hourlyData = Array(24).fill(0);
     orders.forEach(order => {
@@ -35,40 +164,12 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
       });
     });
 
-    // Calculate average order completion time
-    const completedOrders = orders.filter(o => o.status === 'made');
-    const avgTime = completedOrders.reduce((acc, order) => {
-      const orderTime = new Date(order.orderTime);
-      const dueTime = new Date(order.dueTime);
-      return acc + (dueTime - orderTime);
-    }, 0) / (completedOrders.length || 1);
-
-    setAnalytics({
+    setAnalytics(prev => ({
+      ...prev,
       hourlyOrders: hourlyData.map((count, hour) => ({ hour, count })),
-      popularToppings: toppingsCount,
-      averageOrderTime: avgTime / (1000 * 60), // Convert to minutes
-    });
+      popularToppings: toppingsCount
+    }));
   }, [orders]);
-
-  const getTotalSales = () => {
-    const prices = {
-      'Mish-Mash Pizza': 192.00,
-      'Pig in Paradise Pizza': 169.00,
-      'Margie Pizza': 149.00,
-      'The Champ Pizza': 179.00,
-      'Vegan Harvest Pizza': 189.00
-    };
-
-    return orders.reduce((total, order) => {
-      const basePrice = prices[order.pizzaType] || 0;
-      const extraToppingsPrice = order.extraToppings?.length * 15 || 0;
-      const sizeAdjustment = 
-        order.size === 'small' ? -20 :
-        order.size === 'large' ? 30 : 0;
-      
-      return total + basePrice + extraToppingsPrice + sizeAdjustment;
-    }, 0).toFixed(2);
-  };
 
   const getTimeStatus = (dueTime) => {
     const now = new Date();
@@ -91,168 +192,221 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
     return colors[status] || colors.normal;
   };
 
-  return (
-    <main className="p-8">
-      {showOrderForm ? (
-        <OrderForm onSubmit={handleNewOrder} />
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-            <StatsCard 
-              title="Total Orders" 
-              value={orders.length} 
-              change={`+${orders.length}`} 
-            />
-            <StatsCard 
-              title="Total Sales" 
-              value={`R${getTotalSales()}`} 
-            />
-            <StatsCard 
-              title="Pending Orders" 
-              value={orders.filter(o => o.status === 'pending').length} 
-            />
-            <StatsCard 
-              title="Average Order Value" 
-              value={`R${orders.length ? (getTotalSales() / orders.length).toFixed(2) : '0'}`} 
-            />
-            <StatsCard 
-              title="Avg Completion Time" 
-              value={`${Math.round(analytics.averageOrderTime)} min`} 
-            />
-          </div>
+  // Add handleStatusChange function
+  const handleStatusChange = (orderId, newStatus) => {
+    setOrders(orders.map(order => 
+      order.orderId === orderId 
+        ? { ...order, status: newStatus }
+        : order
+    ));
+  };
 
-          {/* Add Order Timeline */}
-          <div className="mb-8 bg-white p-6 rounded-xl shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Order Timeline</h3>
-            <div className="relative h-16">
-              {sortedOrders.map((order, index) => {
-                const timeStatus = getTimeStatus(order.dueTime);
-                const position = `${(index / sortedOrders.length) * 100}%`;
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-secondary-dark to-secondary">
+      <header className="bg-secondary-dark shadow-lg border-b border-secondary-light">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12">
+                <img src="/logo.png" alt="John Dough's" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-primary">John Dough's Dashboard</h1>
+                <p className="text-gray-400 text-sm">Sourdough Pizza Excellence</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setShowOrderForm(true)}
+                className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                New Order
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="col-span-full bg-secondary rounded-xl shadow-lg p-6 border border-secondary-light backdrop-blur-lg bg-opacity-90"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-16 h-16 bg-yellow-500 bg-opacity-20 rounded-full flex items-center justify-center">
+                  <svg className="w-8 h-8 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-primary">Today's Fresh Orders</h2>
+                  <p className="text-gray-400">Crafting Sourdough Excellence</p>
+                </div>
+              </div>
+              {analytics.dailyStats.orderChange > 0 && (
+                <div className="bg-green-500 bg-opacity-10 px-4 py-2 rounded-full">
+                  <span className="text-green-500 font-semibold">
+                    +{analytics.dailyStats.orderChange}%
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="mt-6 grid grid-cols-4 gap-6">
+              <div className="bg-secondary-light rounded-lg p-4">
+                <p className="text-4xl font-bold text-yellow-500">{analytics.dailyStats.totalOrders}</p>
+                <p className="text-gray-400 mt-1">Total Orders</p>
+              </div>
+              <div className="bg-secondary-light rounded-lg p-4">
+                <p className="text-4xl font-bold text-green-500">R{analytics.dailyStats.totalSales.toFixed(0)}</p>
+                <p className="text-gray-400 mt-1">Revenue</p>
+              </div>
+              <div className="bg-secondary-light rounded-lg p-4">
+                <p className="text-4xl font-bold text-blue-500">{analytics.dailyStats.pendingOrders}</p>
+                <p className="text-gray-400 mt-1">Pending</p>
+              </div>
+              <div className="bg-secondary-light rounded-lg p-4">
+                <p className="text-4xl font-bold text-purple-500">{analytics.dailyStats.avgCompletionTime}</p>
+                <p className="text-gray-400 mt-1">Avg. Time (min)</p>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-2 bg-secondary rounded-xl shadow-lg p-6 border border-secondary-light"
+          >
+            <h2 className="text-xl font-bold text-primary mb-6 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Order Timeline
+            </h2>
+            <div className="relative">
+              <div className="absolute left-0 right-0 h-1 bg-secondary-light rounded"></div>
+              {orders.map((order, index) => {
+                const orderTime = new Date(order.orderTime);
+                const now = new Date();
+                const dayStart = new Date(now.setHours(0, 0, 0, 0));
+                const dayEnd = new Date(now.setHours(23, 59, 59, 999));
+                const totalDayMs = dayEnd - dayStart;
+                const orderPosition = ((orderTime - dayStart) / totalDayMs) * 100;
+                
+                const getStatusColor = (order) => {
+                  const waitTime = (now - orderTime) / (1000 * 60); // minutes
+                  if (order.status === 'ready' || order.status === 'delivered') return 'bg-green-500';
+                  if (waitTime > 15) return 'bg-red-500';
+                  return 'bg-yellow-500';
+                };
+
                 return (
                   <div
                     key={order.orderId}
-                    className={`absolute w-4 h-4 rounded-full transform -translate-x-2 cursor-pointer
-                      ${timeStatus === 'overdue' ? 'bg-red-500' :
-                        timeStatus === 'urgent' ? 'bg-orange-500' :
-                        timeStatus === 'warning' ? 'bg-yellow-500' : 'bg-green-500'}`}
-                    style={{ left: position, top: '50%' }}
-                    title={`${order.customerName} - Due: ${new Date(order.dueTime).toLocaleTimeString()}`}
-                  />
+                    className={`absolute w-4 h-4 rounded-full ${getStatusColor(order)} -mt-1.5 transform -translate-x-1/2 cursor-pointer hover:scale-150 transition-transform`}
+                    style={{ left: `${orderPosition}%` }}
+                    title={`${order.customerName} - ${orderTime.toLocaleTimeString()}\n${order.items.map(item => `${item.quantity}x ${item.pizzaType}`).join('\n')}`}
+                  >
+                  </div>
                 );
               })}
-              <div className="absolute w-full h-1 bg-gray-200 top-1/2 transform -translate-y-1/2" />
-            </div>
-          </div>
-
-          {/* Add Analytics Charts */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Hourly Order Distribution</h3>
-              <LineChart width={500} height={300} data={analytics.hourlyOrders}>
-                <XAxis dataKey="hour" />
-                <YAxis />
-                <CartesianGrid strokeDasharray="3 3" />
-                <Tooltip />
-                <Line type="monotone" dataKey="count" stroke="#3b82f6" />
-              </LineChart>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-sm">
-              <h3 className="text-lg font-semibold mb-4">Popular Extra Toppings</h3>
-              <div className="space-y-2">
-                {Object.entries(analytics.popularToppings)
-                  .sort(([,a], [,b]) => b - a)
-                  .slice(0, 5)
-                  .map(([topping, count]) => (
-                    <div key={topping} className="flex items-center">
-                      <div className="flex-1">{topping}</div>
-                      <div className="ml-2 font-semibold">{count} orders</div>
-                      <div className="ml-2 w-32 bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-500 h-2 rounded-full"
-                          style={{
-                            width: `${(count / Math.max(...Object.values(analytics.popularToppings))) * 100}%`
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
+            <div className="flex justify-between text-sm text-gray-400 mt-2">
+              <span>00:00</span>
+              <span>06:00</span>
+              <span>12:00</span>
+              <span>18:00</span>
+              <span>23:59</span>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-secondary rounded-xl shadow-lg p-6 border border-secondary-light"
+          >
+            <h2 className="text-xl font-bold text-primary mb-6 flex items-center">
+              <svg className="w-5 h-5 mr-2 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Today's Insights
+            </h2>
+            <div className="space-y-4">
+              <div className="bg-secondary-light rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-gray-400">Peak Hours</p>
+                  <span className="text-yellow-500 font-semibold">
+                    {(() => {
+                      const hourCounts = new Array(24).fill(0);
+                      orders.forEach(order => {
+                        const hour = new Date(order.orderTime).getHours();
+                        hourCounts[hour]++;
+                      });
+                      const peakHour = hourCounts.indexOf(Math.max(...hourCounts));
+                      return `${peakHour}:00 - ${peakHour + 1}:00`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-secondary-light rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-gray-400">Average Gap</p>
+                  <span className="text-green-500 font-semibold">
+                    {orders.length > 1 ? 
+                      `${Math.round(24 * 60 / orders.length)} min` : 
+                      'N/A'}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-secondary-light rounded-lg p-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-gray-400">Rush Period</p>
+                  <span className="text-blue-500 font-semibold">
+                    {orders.length >= 3 ? '11:00 - 14:00' : 'Not yet'}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
+        </div>
 
-          <div className="space-y-8">
-            <OrderManagement 
-              orders={orders} 
-              onStatusChange={(orderId, newStatus) => {
-                setOrders(orders.map(order => 
-                  order.orderId === orderId 
-                    ? {...order, status: newStatus} 
-                    : order
-                ));
-              }} 
-            />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-secondary rounded-xl shadow-lg border border-secondary-light"
+        >
+          <OrderManagement orders={orders} onStatusChange={handleStatusChange} />
+        </motion.div>
+      </main>
 
-            <CustomerTracking 
-              orders={orders.filter(o => o.status !== 'delivered')} 
-            />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sortedOrders.map(order => {
-              const timeStatus = getTimeStatus(order.dueTime);
-              return (
-                <div 
-                  key={order.orderId} 
-                  className={`order-item p-4 rounded-lg border-l-4 shadow-sm transition-colors duration-300 ${getStatusColor(timeStatus)}`}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold">{order.customerName || 'No name'}</h3>
-                    <span className="text-sm">
-                      Order #{order.orderId ? order.orderId.slice(-4) : 'N/A'}
-                    </span>
-                  </div>
-                  
-                  <p className="text-gray-600">{order.pizzaType || 'Unknown pizza'}</p>
-                  <p className="text-sm text-gray-500">Size: {order.size || 'medium'}</p>
-                  
-                  {order.extraToppings && order.extraToppings.length > 0 && (
-                    <p className="text-sm text-gray-500">
-                      Extra: {order.extraToppings.join(', ')}
-                    </p>
-                  )}
-                  
-                  <div className="mt-3 border-t pt-2">
-                    <CountdownTimer dueTime={order.dueTime} />
-                  </div>
-
-                  <div className="mt-3 flex justify-between items-center">
-                    <span className="text-sm">
-                      Due: {order.dueTime ? new Date(order.dueTime).toLocaleTimeString() : 'No due time'}
-                    </span>
-                    <button
-                      onClick={() => setOrders(orders.map(o => 
-                        o.orderId === order.orderId 
-                          ? {...o, status: 'made'} 
-                          : o
-                      ))}
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        order.status === 'made' 
-                          ? 'bg-gray-200 text-gray-600' 
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}
-                      disabled={order.status === 'made'}
-                    >
-                      {order.status === 'made' ? 'Completed' : 'Mark as Made'}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
+      {showOrderForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-secondary rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto border border-secondary-light"
+          >
+            <div className="p-6 border-b border-secondary-light flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-primary">New Pizza Order</h2>
+              <button
+                onClick={() => setShowOrderForm(false)}
+                className="text-gray-400 hover:text-gray-300 transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <OrderForm onSubmit={handleNewOrder} />
+          </motion.div>
+        </div>
       )}
-    </main>
+    </div>
   );
 };
 
