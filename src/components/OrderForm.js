@@ -1,5 +1,5 @@
 // src/components/OrderForm.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const PIZZA_MENU = {
   'The Champ Pizza': {
@@ -140,94 +140,104 @@ const extraToppingsOptions = [
   "Parmesan shavings"
 ];
 
-const OrderForm = ({ onSubmit }) => {
-  const [orderItems, setOrderItems] = useState([{
+const OrderForm = ({ onSubmit, orders = [] }) => {
+  const [customerName, setCustomerName] = useState('');
+  const [orderSource, setOrderSource] = useState('Window');
+  const [specialNotes, setSpecialNotes] = useState('');
+  const [urgency, setUrgency] = useState('20');
+  const [dueTime, setDueTime] = useState('');
+  const [pizzas, setPizzas] = useState([{
     pizzaType: '',
-    size: 'medium',
-    extraToppings: [],
-    quantity: 1
+    quantity: 1,
+    toppings: [],
+    basePrice: 0,
+    totalPrice: 0
   }]);
 
-  const [customerInfo, setCustomerInfo] = useState({
-    customerName: '',
-    phone: '',
-    address: '',
-    notes: '',
-    urgency: '20'
-  });
+  // Get unique customer names from previous orders
+  const uniqueCustomers = Array.from(new Set(orders.map(order => order.customerName))).filter(Boolean);
 
-  const handleAddPizza = () => {
-    setOrderItems([...orderItems, {
-      pizzaType: '',
-      size: 'medium',
-      extraToppings: [],
-      quantity: 1
-    }]);
+  const calculatePizzaPrice = (pizza) => {
+    const basePrice = PIZZA_MENU[pizza.pizzaType]?.price || 0;
+    const toppingsTotal = pizza.toppings.length * 15; // R15 per extra topping
+
+    return {
+      basePrice,
+      totalPrice: (basePrice + toppingsTotal) * pizza.quantity
+    };
   };
 
-  const handleRemovePizza = (index) => {
-    setOrderItems(orderItems.filter((_, i) => i !== index));
+  const calculateSubtotal = () => {
+    return pizzas.reduce((total, pizza) => total + pizza.totalPrice, 0);
   };
 
   const handlePizzaChange = (index, field, value) => {
-    const newItems = [...orderItems];
-    newItems[index] = {
-      ...newItems[index],
+    const newPizzas = [...pizzas];
+    newPizzas[index] = {
+      ...newPizzas[index],
       [field]: value
     };
-    setOrderItems(newItems);
+
+    // Recalculate prices when pizza type changes
+    if (field === 'pizzaType') {
+      const { basePrice, totalPrice } = calculatePizzaPrice(newPizzas[index]);
+      newPizzas[index].basePrice = basePrice;
+      newPizzas[index].totalPrice = totalPrice;
+    }
+
+    setPizzas(newPizzas);
   };
 
-  const calculateTotal = () => {
-    return orderItems.reduce((total, item) => {
-      if (!item.pizzaType) return total;
-      
-      const pizza = PIZZA_MENU[item.pizzaType];
-      const basePrice = pizza.price;
-      const extraToppingsPrice = item.extraToppings.length * 15; // R15 per extra topping
-      const sizeAdjustment = 
-        item.size === 'small' ? -20 :
-        item.size === 'large' ? 30 : 0;
+  const handleToppingToggle = (index, topping) => {
+    const newPizzas = [...pizzas];
+    const currentToppings = newPizzas[index].toppings;
+    
+    if (currentToppings.find(t => t.name === topping)) {
+      newPizzas[index].toppings = currentToppings.filter(t => t.name !== topping);
+    } else {
+      newPizzas[index].toppings.push({ name: topping, price: 15 });
+    }
 
-      return total + ((basePrice + extraToppingsPrice + sizeAdjustment) * item.quantity);
-    }, 0);
+    const { basePrice, totalPrice } = calculatePizzaPrice(newPizzas[index]);
+    newPizzas[index].basePrice = basePrice;
+    newPizzas[index].totalPrice = totalPrice;
+
+    setPizzas(newPizzas);
+  };
+
+  const addPizza = () => {
+    setPizzas([...pizzas, {
+      pizzaType: '',
+      quantity: 1,
+      toppings: [],
+      basePrice: 0,
+      totalPrice: 0
+    }]);
+  };
+
+  const removePizza = (index) => {
+    setPizzas(pizzas.filter((_, i) => i !== index));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    const orderTime = new Date();
-    const dueTime = new Date(orderTime.getTime() + parseInt(customerInfo.urgency) * 60000);
-    
-    const order = {
-      orderId: `ORDER-${Date.now()}`,
-      customerName: customerInfo.customerName,
-      phone: customerInfo.phone,
-      address: customerInfo.address,
-      notes: customerInfo.notes,
-      items: orderItems,
-      orderTime: orderTime.toISOString(),
-      dueTime: dueTime.toISOString(),
-      status: 'pending',
-      total: calculateTotal()
-    };
+    try {
+      const order = {
+        customerName,
+        orderSource,
+        specialInstructions: specialNotes,
+        items: pizzas,
+        subtotal: calculateSubtotal(),
+        urgencyMinutes: parseInt(urgency),
+        dueTime: dueTime || null,
+        orderTime: new Date().toISOString()
+      };
 
-    onSubmit(order);
-
-    // Reset form state
-    setOrderItems([{
-      pizzaType: '',
-      size: 'medium',
-      extraToppings: [],
-      quantity: 1
-    }]);
-    setCustomerInfo({
-      customerName: '',
-      phone: '',
-      address: '',
-      notes: '',
-      urgency: '20'
-    });
+      onSubmit(order);
+    } catch (error) {
+      console.error('Failed to place order:', error);
+    }
   };
 
   return (
@@ -239,72 +249,109 @@ const OrderForm = ({ onSubmit }) => {
         <div className="space-y-4 mb-6">
           <div>
             <label className="block text-sm font-medium text-primary mb-1">Customer Name</label>
-            <input
-              type="text"
-              required
-              className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-              value={customerInfo.customerName}
-              onChange={(e) => setCustomerInfo({...customerInfo, customerName: e.target.value})}
-            />
+            <div className="flex space-x-2">
+              <select
+                className="flex-1 mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              >
+                <option value="">Select a customer</option>
+                {uniqueCustomers.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Or enter new customer"
+                className="flex-1 mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-primary mb-1">Phone</label>
-            <input
-              type="tel"
-              required
-              className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-              value={customerInfo.phone}
-              onChange={(e) => setCustomerInfo({...customerInfo, phone: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-primary mb-1">Address</label>
-            <input
-              type="text"
-              required
-              className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-              value={customerInfo.address}
-              onChange={(e) => setCustomerInfo({...customerInfo, address: e.target.value})}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-primary mb-1">Urgency (Minutes until due)</label>
+            <label className="block text-sm font-medium text-primary mb-1">Order Source</label>
             <select
+              value={orderSource}
+              onChange={(e) => setOrderSource(e.target.value)}
               className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-              value={customerInfo.urgency}
-              onChange={(e) => setCustomerInfo({...customerInfo, urgency: e.target.value})}
+              required
             >
-              <option value="10">10 minutes (Urgent)</option>
-              <option value="15">15 minutes (High Priority)</option>
-              <option value="20">20 minutes (Normal)</option>
-              <option value="30">30 minutes (Relaxed)</option>
+              <option value="Window">Window</option>
+              <option value="UberEats">UberEats</option>
+              <option value="MrD">Mr D</option>
             </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-primary mb-1">Urgency (Minutes)</label>
+              <select
+                value={urgency}
+                onChange={(e) => setUrgency(e.target.value)}
+                className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
+              >
+                <option value="20">20 minutes (Normal)</option>
+                <option value="30">30 minutes (Relaxed)</option>
+                <option value="15">15 minutes (Rush)</option>
+                <option value="10">10 minutes (Urgent)</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-primary mb-1">Due Time</label>
+              <input
+                type="time"
+                className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
+                value={dueTime}
+                onChange={(e) => setDueTime(e.target.value)}
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-primary mb-1">Special Notes</label>
             <textarea
               className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-              value={customerInfo.notes}
-              onChange={(e) => setCustomerInfo({...customerInfo, notes: e.target.value})}
+              value={specialNotes}
+              onChange={(e) => setSpecialNotes(e.target.value)}
               rows="2"
             />
           </div>
         </div>
 
+        {/* Order Preview */}
+        <div className="mb-6 p-4 bg-secondary-light rounded-lg">
+          <h3 className="text-lg font-medium text-primary mb-3">Order Preview</h3>
+          <div className="space-y-2">
+            {pizzas.map((pizza, index) => (
+              pizza.pizzaType && (
+                <div key={index} className="flex justify-between items-center text-sm text-gray-300">
+                  <span>{pizza.quantity}x {pizza.pizzaType}</span>
+                  <span>R{pizza.totalPrice}</span>
+                </div>
+              )
+            ))}
+            <div className="border-t border-gray-600 mt-2 pt-2 font-medium text-primary">
+              <div className="flex justify-between">
+                <span>Total:</span>
+                <span>R{calculateSubtotal()}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Pizza Items */}
         <div className="space-y-6">
-          {orderItems.map((item, index) => (
+          {pizzas.map((pizza, index) => (
             <div key={index} className="border border-secondary-light rounded-lg p-4 bg-secondary">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium text-primary">Pizza #{index + 1}</h3>
                 {index > 0 && (
                   <button
                     type="button"
-                    onClick={() => handleRemovePizza(index)}
+                    onClick={() => removePizza(index)}
                     className="text-red-500 hover:text-red-400 transition-colors"
                   >
                     Remove
@@ -318,7 +365,7 @@ const OrderForm = ({ onSubmit }) => {
                   <select
                     required
                     className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-                    value={item.pizzaType}
+                    value={pizza.pizzaType}
                     onChange={(e) => handlePizzaChange(index, 'pizzaType', e.target.value)}
                   >
                     <option value="">Select a pizza</option>
@@ -328,41 +375,28 @@ const OrderForm = ({ onSubmit }) => {
                       </option>
                     ))}
                   </select>
-                  {item.pizzaType && (
+                  {pizza.pizzaType && (
                     <div className="mt-2 space-y-2">
                       <p className="text-sm text-gray-400">
-                        {PIZZA_MENU[item.pizzaType].description}
+                        {PIZZA_MENU[pizza.pizzaType].description}
                       </p>
                       <p className="text-sm text-gray-400">
-                        Ingredients: {PIZZA_MENU[item.pizzaType].ingredients.join(', ')}
+                        Ingredients: {PIZZA_MENU[pizza.pizzaType].ingredients.join(', ')}
                       </p>
                       <p className="text-sm text-gray-400">
-                        Prep Time: {PIZZA_MENU[item.pizzaType].prepTime} minutes
+                        Prep Time: {PIZZA_MENU[pizza.pizzaType].prepTime} minutes
                       </p>
-                      {PIZZA_MENU[item.pizzaType].isVegetarian && (
+                      {PIZZA_MENU[pizza.pizzaType].isVegetarian && (
                         <span className="inline-block bg-green-500 text-white text-xs px-2 py-1 rounded">Vegetarian</span>
                       )}
-                      {PIZZA_MENU[item.pizzaType].isVegan && (
+                      {PIZZA_MENU[pizza.pizzaType].isVegan && (
                         <span className="inline-block bg-green-600 text-white text-xs px-2 py-1 rounded ml-2">Vegan</span>
                       )}
-                      {PIZZA_MENU[item.pizzaType].isPopular && (
-                        <span className="inline-block bg-yellow-500 text-black text-xs px-2 py-1 rounded ml-2">Popular #{PIZZA_MENU[item.pizzaType].rank}</span>
+                      {PIZZA_MENU[pizza.pizzaType].isPopular && (
+                        <span className="inline-block bg-yellow-500 text-black text-xs px-2 py-1 rounded ml-2">Popular #{PIZZA_MENU[pizza.pizzaType].rank}</span>
                       )}
                     </div>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-primary mb-1">Size</label>
-                  <select
-                    className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-                    value={item.size}
-                    onChange={(e) => handlePizzaChange(index, 'size', e.target.value)}
-                  >
-                    <option value="small">Small (-R20)</option>
-                    <option value="medium">Medium</option>
-                    <option value="large">Large (+R30)</option>
-                  </select>
                 </div>
 
                 <div>
@@ -372,7 +406,7 @@ const OrderForm = ({ onSubmit }) => {
                     min="1"
                     max="10"
                     className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-                    value={item.quantity}
+                    value={pizza.quantity}
                     onChange={(e) => handlePizzaChange(index, 'quantity', parseInt(e.target.value))}
                   />
                 </div>
@@ -381,49 +415,42 @@ const OrderForm = ({ onSubmit }) => {
                   <label className="block text-sm font-medium text-primary mb-1">
                     Extra Toppings (R15 each)
                   </label>
-                  <select
-                    multiple
-                    className="mt-1 block w-full rounded-md bg-secondary-light border-secondary-light text-gray-200 focus:border-primary focus:ring-primary"
-                    value={item.extraToppings}
-                    onChange={(e) => handlePizzaChange(index, 'extraToppings', 
-                      Array.from(e.target.selectedOptions, option => option.value))}
-                  >
+                  <div className="mt-2 space-x-2">
                     {extraToppingsOptions.map(topping => (
-                      <option key={topping} value={topping}>{topping}</option>
+                      <label key={topping} className="inline-flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={pizza.toppings.some(t => t.name === topping)}
+                          onChange={() => handleToppingToggle(index, topping)}
+                          className="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-600">{topping}</span>
+                      </label>
                     ))}
-                  </select>
+                  </div>
                 </div>
 
                 {/* Price Breakdown */}
-                {item.pizzaType && (
+                {pizza.pizzaType && (
                   <div className="mt-4 p-4 bg-secondary-light rounded-lg">
                     <h4 className="text-primary font-medium mb-2">Price Breakdown</h4>
                     <div className="space-y-1 text-sm text-gray-300">
                       <div className="flex justify-between">
                         <span>Base Price:</span>
-                        <span>R{PIZZA_MENU[item.pizzaType].price}</span>
+                        <span>R{pizza.basePrice}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span>Size Adjustment:</span>
-                        <span>{item.size === 'small' ? '-R20' : item.size === 'large' ? '+R30' : 'R0'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Extra Toppings ({item.extraToppings.length} × R15):</span>
-                        <span>+R{item.extraToppings.length * 15}</span>
+                        <span>Extra Toppings ({pizza.toppings.length} × R15):</span>
+                        <span>+R{pizza.toppings.length * 15}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Quantity:</span>
-                        <span>×{item.quantity}</span>
+                        <span>×{pizza.quantity}</span>
                       </div>
                       <div className="border-t border-gray-600 mt-2 pt-2 font-medium text-primary">
                         <div className="flex justify-between">
                           <span>Subtotal:</span>
-                          <span>R{(
-                            (PIZZA_MENU[item.pizzaType].price + 
-                            (item.size === 'small' ? -20 : item.size === 'large' ? 30 : 0) + 
-                            (item.extraToppings.length * 15)) * 
-                            item.quantity
-                          ).toFixed(2)}</span>
+                          <span>R{pizza.totalPrice}</span>
                         </div>
                       </div>
                     </div>
@@ -434,18 +461,18 @@ const OrderForm = ({ onSubmit }) => {
           ))}
         </div>
 
-        {/* Order Total */}
+        {/* Order Total and Buttons */}
         <div className="mt-6 p-4 bg-secondary-light rounded-lg">
           <div className="flex justify-between items-center text-lg font-bold text-primary">
             <span>Order Total:</span>
-            <span>R{calculateTotal().toFixed(2)}</span>
+            <span>R{calculateSubtotal()}</span>
           </div>
         </div>
 
         <div className="mt-6 space-x-4">
           <button
             type="button"
-            onClick={handleAddPizza}
+            onClick={addPizza}
             className="inline-flex items-center px-4 py-2 border border-primary text-sm font-medium rounded-md text-primary hover:bg-primary hover:text-secondary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
           >
             Add Another Pizza

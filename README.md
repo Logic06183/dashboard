@@ -7,11 +7,35 @@ A modern, real-time dashboard for managing pizza orders and tracking business me
 ## Features
 
 - 📊 Real-time order tracking and management
-- 🕒 Order timeline with status indicators
-- 📈 Business analytics and insights
+- 🕒 Order timeline with status indicators and due time tracking
+- 📈 Interactive business analytics and insights
 - 🏪 Kitchen display system
 - 💫 Modern UI with smooth animations
 - 📱 Responsive design for all devices
+- 📦 Inventory management and stock tracking
+- 👥 Customer management system
+
+## Core Components
+
+### Order Management
+- Streamlined order form with customer selection
+- Real-time order preview before submission
+- Due time tracking for delivery services (e.g., Uber Eats)
+- Active order monitoring with time-based prioritization
+- Automated total calculations
+
+### Inventory System
+- Real-time stock level monitoring
+- Ingredient usage tracking per pizza
+- Variance analysis between estimated and actual stock usage
+- Automated stock alerts and notifications
+
+### Analytics Dashboard
+- Interactive sales and order analytics
+- Peak hour visualization and analysis
+- Inventory usage patterns and trends
+- Performance metrics and KPIs
+- Enhanced data visualization with modern charts
 
 ## Tech Stack
 
@@ -97,21 +121,6 @@ If you aren't satisfied with the build tool and configuration choices, you can `
 Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
 
 You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Features
-
-### Dashboard
-- Today's order statistics
-- Real-time order timeline
-- Peak hours analysis
-- Revenue tracking
-- Order status management
-
-### Kitchen Display
-- Active order monitoring
-- Order prioritization
-- Status updates
-- Wait time tracking
 
 ## Deployment
 

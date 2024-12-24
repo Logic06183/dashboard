@@ -48,25 +48,6 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
 
     // Calculate total sales
     const calculateOrderTotal = (order) => {
-      // Base pizza prices
-      const PIZZA_PRICES = {
-        'Mish-Mash Pizza': 192.00,
-        'Pig in Paradise Pizza': 169.00,
-        'Margie Pizza': 149.00,
-        'The Champ Pizza': 179.00,
-        'Vegan Harvest Pizza': 189.00
-      };
-
-      // Extra toppings price
-      const EXTRA_TOPPING_PRICE = 15.00;
-
-      // Size adjustments
-      const SIZE_ADJUSTMENTS = {
-        'small': -20.00,
-        'medium': 0.00,
-        'large': 30.00
-      };
-
       try {
         if (!order.items || !Array.isArray(order.items)) {
           console.error('Invalid order items structure:', order);
@@ -74,74 +55,38 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
         }
 
         const total = order.items.reduce((sum, item) => {
-          // Get base price for the pizza type
-          const basePrice = PIZZA_PRICES[item.pizzaType] || 0;
-          
-          // Calculate extra toppings cost
-          const extraToppingsPrice = (item.extraToppings?.length || 0) * EXTRA_TOPPING_PRICE;
-          
-          // Get size adjustment
-          const sizeAdjustment = SIZE_ADJUSTMENTS[item.size] || 0;
-          
-          // Get quantity (default to 1 if not specified)
-          const quantity = item.quantity || 1;
-
-          // Calculate total for this item
-          const itemTotal = (basePrice + extraToppingsPrice + sizeAdjustment) * quantity;
-
-          console.log(`Order item calculation for ${order.orderId}:`, {
-            pizzaType: item.pizzaType,
-            basePrice,
-            extraToppings: item.extraToppings?.length || 0,
-            extraToppingsPrice,
-            size: item.size,
-            sizeAdjustment,
-            quantity,
-            itemTotal
-          });
-
-          return sum + itemTotal;
+          if (!item.totalPrice) {
+            console.error('Missing totalPrice for item:', item);
+            return sum;
+          }
+          return sum + item.totalPrice;
         }, 0);
 
         return total;
       } catch (error) {
-        console.error('Error calculating order total:', error, order);
+        console.error('Error calculating order total:', error);
         return 0;
       }
+    };
+
+    // Calculate daily stats
+    const dailyStats = {
+      totalOrders: todayOrders.length,
+      totalSales: todayOrders.reduce((sum, order) => sum + calculateOrderTotal(order), 0),
+      pendingOrders: todayOrders.filter(order => order.status === 'pending').length,
+      avgOrderValue: todayOrders.length > 0 
+        ? (todayOrders.reduce((sum, order) => sum + calculateOrderTotal(order), 0) / todayOrders.length).toFixed(2)
+        : 0,
+      avgCompletionTime: calculateAverageCompletionTime(todayOrders),
+      orderChange: parseFloat(orderChange)
     };
 
     // Filter active orders (not ready or delivered)
     const activeOrders = todayOrders.filter(o => !['ready', 'delivered'].includes(o.status));
     
-    const totalSales = activeOrders.reduce((sum, order) => {
-      const orderTotal = calculateOrderTotal(order);
-      console.log(`Order ${order.orderId} total: R${orderTotal}`);
-      return sum + orderTotal;
-    }, 0);
-
-    console.log('Total sales for today:', totalSales);
-
-    const pendingOrders = activeOrders.filter(o => o.status === 'pending').length;
-    const avgOrderValue = activeOrders.length > 0 ? totalSales / activeOrders.length : 0;
-
-    // Calculate average completion time for active orders only
-    const inProgressOrders = activeOrders.filter(o => o.status !== 'pending');
-    const avgTime = inProgressOrders.reduce((acc, order) => {
-      const orderTime = new Date(order.orderTime);
-      const now = new Date();
-      return acc + (now - orderTime);
-    }, 0) / (inProgressOrders.length || 1);
-
     setAnalytics(prev => ({
       ...prev,
-      dailyStats: {
-        totalOrders: activeOrders.length,
-        totalSales,
-        pendingOrders,
-        avgOrderValue,
-        avgCompletionTime: Math.round(avgTime / (1000 * 60)), // Convert to minutes
-        orderChange: parseFloat(orderChange)
-      }
+      dailyStats
     }));
   }, [orders]);
 
