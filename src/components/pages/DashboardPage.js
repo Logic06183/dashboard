@@ -22,6 +22,20 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
     }
   });
 
+  // Calculate average completion time for orders
+  const calculateAverageCompletionTime = (orders) => {
+    const completedOrders = orders.filter(order => order.status === 'delivered');
+    if (completedOrders.length === 0) return 0;
+
+    const totalTime = completedOrders.reduce((sum, order) => {
+      const orderTime = new Date(order.orderTime);
+      const deliveryTime = new Date(order.deliveryTime || order.completionTime);
+      return sum + (deliveryTime - orderTime);
+    }, 0);
+
+    return Math.round(totalTime / (completedOrders.length * 60000)); // Convert to minutes
+  };
+
   // Calculate order stats
   useEffect(() => {
     const today = new Date();
@@ -277,7 +291,7 @@ const DashboardPage = ({ orders, setOrders, showOrderForm, setShowOrderForm, han
           >
             <h2 className="text-xl font-bold text-primary mb-6 flex items-center">
               <svg className="w-5 h-5 mr-2 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2v9a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               Today's Insights
             </h2>
