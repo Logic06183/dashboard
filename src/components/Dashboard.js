@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Users, FileText, Settings, Menu, Bell } from 'lucide-react';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { MdDashboard, MdPeople, MdDescription, MdSettings, MdMenu, MdNotifications, MdInventory } from 'react-icons/md';
 import NavItem from './NavItem';
 import StatsCard from './StatsCard';
 import OrderForm from './OrderForm';
@@ -8,6 +8,7 @@ import DashboardPage from './pages/DashboardPage';
 import CustomersPage from './pages/CustomersPage';
 import OrdersPage from './pages/OrdersPage';
 import SettingsPage from './pages/SettingsPage';
+import InventoryPage from './pages/InventoryPage';
 import useLocalStorage from '../hooks/useLocalStorage';
 import CountdownTimer from './CountdownTimer';
 
@@ -25,6 +26,34 @@ const Dashboard = () => {
     setOrders([]);
   };
 
+  const sidebarItems = [
+    {
+      name: 'Dashboard',
+      icon: <MdDashboard className="w-6 h-6" />,
+      path: '/',
+    },
+    {
+      name: 'Customers',
+      icon: <MdPeople className="w-6 h-6" />,
+      path: '/customers',
+    },
+    {
+      name: 'Orders',
+      icon: <MdDescription className="w-6 h-6" />,
+      path: '/orders',
+    },
+    {
+      name: 'Inventory',
+      icon: <MdInventory className="w-6 h-6" />,
+      path: '/inventory',
+    },
+    {
+      name: 'Settings',
+      icon: <MdSettings className="w-6 h-6" />,
+      path: '/settings',
+    },
+  ];
+
   return (
     <Router>
       <div className="flex h-screen bg-gray-100">
@@ -36,15 +65,14 @@ const Dashboard = () => {
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="p-2 rounded-lg hover:bg-gray-100"
             >
-              <Menu size={24} />
+              <MdMenu size={24} />
             </button>
           </div>
           
           <nav className="mt-8">
-            <NavItem to="/" icon={<LayoutDashboard />} label="Dashboard" expanded={sidebarOpen} />
-            <NavItem to="/customers" icon={<Users />} label="Customers" expanded={sidebarOpen} />
-            <NavItem to="/orders" icon={<FileText />} label="Orders" expanded={sidebarOpen} />
-            <NavItem to="/settings" icon={<Settings />} label="Settings" expanded={sidebarOpen} />
+            {sidebarItems.map((item, index) => (
+              <NavItem key={index} to={item.path} icon={item.icon} label={item.name} expanded={sidebarOpen} />
+            ))}
           </nav>
         </div>
 
@@ -67,7 +95,7 @@ const Dashboard = () => {
                   New Order
                 </button>
                 <button className="p-2 rounded-full hover:bg-gray-100 relative">
-                  <Bell size={24} />
+                  <MdNotifications size={24} />
                   {orders.filter(o => o.status === 'pending').length > 0 && (
                     <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                   )}
@@ -82,10 +110,22 @@ const Dashboard = () => {
             change="+10%"
           />
 
+          {showOrderForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <OrderForm 
+                  onSubmit={handleNewOrder} 
+                  orders={orders}
+                  setShowOrderForm={setShowOrderForm}
+                />
+              </div>
+            </div>
+          )}
+
           <Routes>
             <Route 
               path="/" 
-              element={
+              element={(
                 <DashboardPage 
                   orders={orders}
                   setOrders={setOrders}
@@ -93,10 +133,11 @@ const Dashboard = () => {
                   setShowOrderForm={setShowOrderForm}
                   handleNewOrder={handleNewOrder}
                 />
-              } 
+              )} 
             />
             <Route path="/customers" element={<CustomersPage orders={orders} />} />
             <Route path="/orders" element={<OrdersPage orders={orders} setOrders={setOrders} />} />
+            <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
