@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import StatsCard from '../StatsCard';
 import OrderManagement from '../OrderManagement';
 import CustomerTracking from '../CustomerTracking';
-import OrderForm from '../OrderForm';
+import CustomOrderForm from '../CustomOrderForm';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -197,6 +197,15 @@ const DashboardPage = ({ orders = [], setOrders, showOrderForm, setShowOrderForm
         </div>
       </header>
 
+      {/* Order Form Modal */}
+      {showOrderForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-6xl">
+            <CustomOrderForm onSubmit={handleNewOrder} setShowOrderForm={setShowOrderForm} />
+          </div>
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatsCard
@@ -206,12 +215,12 @@ const DashboardPage = ({ orders = [], setOrders, showOrderForm, setShowOrderForm
           />
           <StatsCard
             title="Total Sales"
-            value={'$' + analytics.dailyStats.totalSales.toFixed(2)}
+            value={'R' + analytics.dailyStats.totalSales.toFixed(2)}
             change="+10%"
           />
           <StatsCard
             title="Average Order Value"
-            value={'$' + analytics.dailyStats.avgOrderValue}
+            value={'R' + analytics.dailyStats.avgOrderValue}
             change="+5%"
           />
           <StatsCard

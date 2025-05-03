@@ -66,11 +66,37 @@ const CustomerTracking = ({ orders = [] }) => {  // Add default empty array
 
           <div className="mt-4 bg-gray-50 rounded-lg p-4">
             <h3 className="font-medium mb-2">Order Details</h3>
-            <p>{order.pizzaType} ({order.size})</p>
-            {order.extraToppings && order.extraToppings.length > 0 && (
-              <p className="text-sm text-gray-600">Extra Toppings: {order.extraToppings.join(', ')}</p>
+            
+            {/* Display pizzas from the new order format */}
+            {order.pizzas && order.pizzas.length > 0 ? (
+              <div className="space-y-2">
+                {order.pizzas.map((pizza, idx) => (
+                  <div key={idx} className="text-sm">
+                    <p>{pizza.quantity}x {pizza.pizzaType}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              /* Fallback to old format */
+              <p>{order.pizzaType} {order.size && `(${order.size})`}</p>
             )}
-            <p className="text-sm text-gray-600 mt-2">Delivery to: {order.address}</p>
+            
+            {/* Handle extraToppings as either string or array */}
+            {order.extraToppings && (
+              <p className="text-sm text-gray-600">
+                Extra Toppings: {Array.isArray(order.extraToppings) ? order.extraToppings.join(', ') : order.extraToppings}
+              </p>
+            )}
+            
+            {/* Only show address if it exists */}
+            {order.address && (
+              <p className="text-sm text-gray-600 mt-2">Delivery to: {order.address}</p>
+            )}
+            
+            {/* Show platform if it exists */}
+            {order.platform && (
+              <p className="text-sm text-gray-600 mt-2">Platform: {order.platform}</p>
+            )}
           </div>
         </div>
       ))}

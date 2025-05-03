@@ -1,7 +1,17 @@
-import React from 'react';
-import KitchenDisplay from '../KitchenDisplay';
+import React, { useState, useEffect } from 'react';
+import TableKitchenDisplay from '../TableKitchenDisplay';
 
 const KitchenDisplayPage = ({ orders, onStatusChange }) => {
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Update time every second for the header clock
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+  
   return (
     <div className="min-h-screen bg-secondary-dark">
       <header className="bg-secondary shadow-lg">
@@ -10,12 +20,12 @@ const KitchenDisplayPage = ({ orders, onStatusChange }) => {
           <div className="flex items-center space-x-4">
             <div className="bg-secondary-light px-4 py-2 rounded-lg">
               <span className="text-primary font-medium">Active Orders: </span>
-              <span className="text-yellow-500 font-bold">{orders.filter(o => !['ready', 'delivered'].includes(o.status)).length}</span>
+              <span className="text-yellow-500 font-bold">{orders.filter(o => !['delivered'].includes(o.status)).length}</span>
             </div>
             <div className="bg-secondary-light px-4 py-2 rounded-lg">
               <span className="text-primary font-medium">Time: </span>
               <span className="text-primary font-mono">
-                {new Date().toLocaleTimeString()}
+                {currentTime.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
               </span>
             </div>
           </div>
@@ -23,7 +33,7 @@ const KitchenDisplayPage = ({ orders, onStatusChange }) => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <KitchenDisplay orders={orders} onStatusChange={onStatusChange} />
+        <TableKitchenDisplay orders={orders} onStatusChange={onStatusChange} />
       </main>
     </div>
   );

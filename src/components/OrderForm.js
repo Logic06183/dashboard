@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 
 const PIZZA_MENU = {
-  'Margherita': { price: 89 },
-  'Pepperoni': { price: 109 },
-  'Hawaiian': { price: 99 },
-  'Vegetarian': { price: 99 },
-  'BBQ Chicken': { price: 119 },
-  'Mushroom & Feta': { price: 109 },
-  'Four Cheese': { price: 119 },
-  'Supreme': { price: 129 }
+  'The Champ Pizza': { price: 179 },
+  'Pig in Paradise': { price: 169 },
+  'Margie Pizza': { price: 149 },
+  'Mushroom Cloud Pizza': { price: 174 },
+  'Spud Pizza': { price: 149 },
+  'Mish-Mash Pizza': { price: 192 },
+  'Lekker\'izza': { price: 194 },
+  'Sunshine Margherita': { price: 149 },
+  'Vegan Harvest Pizza': { price: 189 },
+  'Poppa\'s Pizza': { price: 179 },
+  'The Zesty Zucchini': { price: 149 },
+  'Chick Tick Boom': { price: 172 },
+  'Artichoke & Ham': { price: 172 },
+  'Jane\'s Dough': { price: 109 }
 };
 
 const OrderForm = ({ onSubmit, setShowOrderForm }) => {
