@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import StatsCard from '../StatsCard';
 import OrderManagement from '../OrderManagement';
 import CustomerTracking from '../CustomerTracking';
-import CustomOrderForm from '../CustomOrderForm';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
-const DashboardPage = ({ orders = [], setOrders, showOrderForm, setShowOrderForm, handleNewOrder }) => {
+const DashboardPage = ({ orders = [], setOrders, onStatusChange }) => {
   const [sortedOrders, setSortedOrders] = useState([]);
   const [analytics, setAnalytics] = useState({
     hourlyOrders: [],
@@ -162,14 +161,13 @@ const DashboardPage = ({ orders = [], setOrders, showOrderForm, setShowOrderForm
     return colors[status] || colors.normal;
   };
 
-  // Add handleStatusChange function
+  // Define handleStatusChange locally since it's not being passed correctly
   const handleStatusChange = (orderId, newStatus) => {
-    if (!orderId) return;
+    if (!orderId || !newStatus || !setOrders) return;
+    
     setOrders(prevOrders => 
       prevOrders.map(order => 
-        order.orderId === orderId 
-          ? { ...order, status: newStatus }
-          : order
+        order.id === orderId ? { ...order, status: newStatus } : order
       )
     );
   };
@@ -185,26 +183,9 @@ const DashboardPage = ({ orders = [], setOrders, showOrderForm, setShowOrderForm
                 <p className="text-gray-400 text-sm">Sourdough Pizza Excellence</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setShowOrderForm(true)}
-                className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >
-                New Order
-              </button>
-            </div>
           </div>
         </div>
       </header>
-
-      {/* Order Form Modal */}
-      {showOrderForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="relative w-full max-w-6xl">
-            <CustomOrderForm onSubmit={handleNewOrder} setShowOrderForm={setShowOrderForm} />
-          </div>
-        </div>
-      )}
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-const Sidebar = () => {
+const Sidebar = ({ setShowOrderForm }) => {
   const location = useLocation();
 
   const isActive = (path) => {
@@ -26,7 +26,19 @@ const Sidebar = () => {
         </div>
       </div>
       
-      <nav className="mt-8">
+      <div className="p-4 border-t border-secondary-light">
+        <button
+          onClick={() => setShowOrderForm(true)}
+          className="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-4 py-2 rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl flex items-center justify-center"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+            <path d="M12 4v16m8-8H4"></path>
+          </svg>
+          New Order
+        </button>
+      </div>
+      
+      <nav className="mt-4">
         <Link
           to="/"
           className={`flex items-center px-4 py-3 text-gray-300 hover:bg-primary hover:bg-opacity-10 ${isActive('/')}`}

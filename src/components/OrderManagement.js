@@ -49,8 +49,8 @@ const OrderManagement = ({ orders, onStatusChange }) => {
     const allCooked = orderCopy.cooked.every(status => status);
     orderCopy.status = allCooked ? 'ready' : 'pending';
     
-    // Update the order with the new cooked status - use a direct approach
-    onStatusChange(orderId, orderCopy);
+    // Update the order with the new cooked status - pass just the orderId and status string
+    onStatusChange(orderId, orderCopy.status);
     
     // Force a re-render by updating the component state
     const orderIndex = orders.findIndex(o => (o.id === orderId || o.orderId === orderId));

@@ -1,69 +1,94 @@
 # John Dough's Sourdough Pizzeria Dashboard
 
-A modern, real-time dashboard for managing pizza orders and tracking business metrics. Built with React and styled with Tailwind CSS.
+A modern, real-time dashboard for managing pizza orders and tracking business metrics for John Dough's Sourdough Pizzeria in Linden, Johannesburg. Built with React and styled with Tailwind CSS.
 
 ![John Dough's Logo](public/logo.png)
 
+## About John Dough's
+
+Established in 2022, John Dough's Sourdough Pizzeria is a family-run business located at 44 1st Avenue, Linden, Randburg, Johannesburg. What sets this pizzeria apart is its unwavering passion for pizza and commitment to crafting the perfect sourdough crust.
+
+- **Phone:** 061 525 6829
+- **Hours:** 12:00 - 20:30
+- **Rating:** ★★★★★ (4.8)
+
 ## Features
 
-- 📊 Real-time order tracking and management
-- 🕒 Order timeline with status indicators and due time tracking
-- 📈 Interactive business analytics and insights
-- 🏪 Kitchen display system
-- 💫 Modern UI with smooth animations
+- 📊 Real-time order tracking and management with customer name identification
+- 🕒 Order timeline with status indicators and South African time format (24-hour)
+- 📈 Interactive business analytics and insights in Rand (R)
+- 🏪 Kitchen display system with row-based pizza organization
+- 💫 Modern UI with smooth animations and South African localization
 - 📱 Responsive design for all devices
 - 📦 Inventory management and stock tracking
-- 👥 Customer management system
+- 👥 Customer management system with platform tracking (Uber, Window, etc.)
 
 ## Core Components
 
 ### Order Management
-- Streamlined order form with customer selection
+- Google Forms-inspired order form with customer name field
+- Platform selection (Uber, Mr. Delivery, Bolt, Window, Other)
+- Row-based pizza ordering system for kitchen organization
+- Special instructions and extra toppings tracking
+- Preparation time input for urgency determination
 - Real-time order preview before submission
-- Due time tracking for delivery services (e.g., Uber Eats)
-- Active order monitoring with time-based prioritization
-- Automated total calculations
+- Automated total calculations in Rand (R)
 
-### Inventory System
-- Real-time stock level monitoring
-- Ingredient usage tracking per pizza
-- Variance analysis between estimated and actual stock usage
-- Automated stock alerts and notifications
+### Kitchen Display System
+- Table-based kitchen display with row organization
+- Dynamic sorting by urgency (Very Late, Late, On Time)
+- Color-coded status indicators for quick visual assessment
+- Checkbox interface for marking pizzas as cooked
+- Customer name and platform information display
+- South African time format (24-hour) for all timestamps
+- Due time calculation based on preparation time
 
-### Analytics Dashboard
-- Interactive sales and order analytics
+### Dashboard Analytics
+- Interactive sales and order analytics in Rand (R)
 - Peak hour visualization and analysis
-- Inventory usage patterns and trends
+- Order tracking with customer information
 - Performance metrics and KPIs
 - Enhanced data visualization with modern charts
 
 ## Tech Stack
 
-- **Frontend Framework:** React 19
-- **Routing:** React Router 7
+- **Frontend Framework:** React 18
+- **Routing:** React Router 6
 - **Styling:** Tailwind CSS
 - **Charts:** Recharts
 - **Animations:** Framer Motion
-- **Icons:** Lucide React
+- **Location:** Linden, Johannesburg, South Africa
+- **Currency:** South African Rand (R)
+- **Time Format:** South African Standard Time (24-hour)
 
 ## Getting Started
 
-1. **Clone the repository**
 ```bash
-git clone <repository-url>
-cd dashboard
-```
+# Clone the repository
+git clone https://github.com/yourusername/pizza-dashboard.git
 
-2. **Install dependencies**
-```bash
+# Navigate to the project directory
+cd pizza-dashboard
+
+# Install dependencies
 npm install
-```
 
-3. **Start the development server**
-```bash
+# Start the development server
 npm start
 ```
-The app will open at [http://localhost:3000](http://localhost:3000)
+
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
+## Customization for John Dough's
+
+This dashboard has been specifically customized for John Dough's Sourdough Pizzeria in Linden, Johannesburg with the following features:
+
+- **South African Localization**: All times are displayed in 24-hour format and all currency values use South African Rand (R)
+- **Menu Integration**: The complete menu from John Dough's has been integrated, including specialty pizzas like Mish-Mash, Pig in Paradise, and Mushroom Cloud
+- **Row-Based Kitchen System**: Orders are organized by row to match the physical layout of the kitchen
+- **Platform Tracking**: Orders are tagged by platform (Uber, Window, etc.) for better management
+- **Customer-Centric Design**: Orders are identified by customer name for easier reference
+- **Branding**: Custom color scheme matching John Dough's branding
 
 ## Project Structure
 

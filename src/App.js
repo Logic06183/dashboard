@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DashboardPage from './components/pages/DashboardPage';
 import KitchenDisplayPage from './components/pages/KitchenDisplayPage';
 import Sidebar from './components/Sidebar';
+import CustomOrderForm from './components/CustomOrderForm';
 import { sampleOrders } from './sampleOrders';
 import './App.css';
 
@@ -85,8 +86,17 @@ function App() {
   return (
     <Router>
       <div className="flex min-h-screen bg-secondary-dark text-primary" style={{ '--color-primary': '#e76f51', '--color-secondary': '#2a2d3e' }}>
-        <Sidebar />
+        <Sidebar setShowOrderForm={setShowOrderForm} />
         <div className="flex-1">
+          {/* Order Form Modal - Now at App level so it's accessible from any page */}
+          {showOrderForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+              <div className="relative w-full max-w-6xl">
+                <CustomOrderForm onSubmit={handleNewOrder} setShowOrderForm={setShowOrderForm} />
+              </div>
+            </div>
+          )}
+          
           <Routes>
             <Route 
               path="/" 
@@ -94,10 +104,7 @@ function App() {
                 <DashboardPage 
                   orders={orders}
                   setOrders={setOrders}
-                  showOrderForm={showOrderForm}
-                  setShowOrderForm={setShowOrderForm}
-                  handleNewOrder={handleNewOrder}
-                  handleStatusChange={handleStatusChange}
+                  onStatusChange={handleStatusChange}
                 />
               } 
             />

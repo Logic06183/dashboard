@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 const PIZZA_MENU = {
   'The Champ Pizza': { price: 179 },
@@ -23,6 +23,18 @@ const OrderForm = ({ onSubmit, setShowOrderForm }) => {
     quantity: 1,
     totalPrice: 0
   }]);
+  const [customerName, setCustomerName] = useState('');
+  const [prepTime, setPrepTime] = useState(15); // Default prep time in minutes
+  const [dueTime, setDueTime] = useState('');
+  
+  // Calculate default due time (current time + prep time)
+  useEffect(() => {
+    const now = new Date();
+    const defaultDueTime = new Date(now.getTime() + prepTime * 60000);
+    const hours = defaultDueTime.getHours().toString().padStart(2, '0');
+    const minutes = defaultDueTime.getMinutes().toString().padStart(2, '0');
+    setDueTime(`${hours}:${minutes}`);
+  }, [prepTime]);
 
   const calculateTotal = () => {
     return pizzas.reduce((sum, pizza) => sum + (pizza.totalPrice || 0), 0);
@@ -57,11 +69,19 @@ const OrderForm = ({ onSubmit, setShowOrderForm }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
+    // Calculate due time from input
+    const [hours, minutes] = dueTime.split(':').map(Number);
+    const dueDate = new Date();
+    dueDate.setHours(hours, minutes, 0, 0);
+    
     const order = {
       id: Date.now(),
       pizzas: pizzas.filter(pizza => pizza.pizzaType && pizza.quantity > 0),
       status: 'pending',
       orderTime: new Date().toISOString(),
+      dueTime: dueDate.toISOString(), // Add due time to order
+      prepTime: prepTime, // Add prep time in minutes
+      customerName: customerName.trim() || undefined,
       totalAmount: calculateTotal(),
       cooked: pizzas.map(() => false) // Track cooking status for each pizza
     };
@@ -111,6 +131,51 @@ const OrderForm = ({ onSubmit, setShowOrderForm }) => {
         ))}
       </div>
 
+      <div className="mt-6 space-y-4">
+        <div className="flex flex-col space-y-2">
+          <label htmlFor="customerName" className="text-sm font-medium text-gray-700">Customer Name</label>
+          <input
+            type="text"
+            id="customerName"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            className="rounded-md bg-gray-100 border-gray-300"
+            placeholder="Optional"
+          />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="flex flex-col space-y-2">
+            <label htmlFor="prepTime" className="text-sm font-medium text-gray-700">Preparation Time (minutes)</label>
+            <select
+              id="prepTime"
+              value={prepTime}
+              onChange={(e) => setPrepTime(Number(e.target.value))}
+              className="rounded-md bg-gray-100 border-gray-300"
+            >
+              <option value="10">10 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="20">20 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">60 minutes</option>
+            </select>
+          </div>
+          
+          <div className="flex flex-col space-y-2">
+            <label htmlFor="dueTime" className="text-sm font-medium text-gray-700">Due Time</label>
+            <input
+              type="time"
+              id="dueTime"
+              value={dueTime}
+              onChange={(e) => setDueTime(e.target.value)}
+              className="rounded-md bg-gray-100 border-gray-300"
+              required
+            />
+          </div>
+        </div>
+      </div>
+      
       <div className="flex justify-between items-center">
         <button
           type="button"
