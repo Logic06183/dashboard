@@ -6,16 +6,18 @@ import InventoryPage from './components/pages/InventoryPage';
 import OrdersPage from './components/pages/OrdersPage';
 import AnalyticsPage from './components/pages/AnalyticsPage';
 import Sidebar from './components/Sidebar';
-import OrderForm from './components/OrderForm';
+import SimpleOrderForm from './components/SimpleOrderForm';
+import TestOrderForm from './components/TestOrderForm';
+import FirebaseTest from './components/FirebaseTest';
 import { sampleOrders } from './sampleOrders';
 import { useApi } from './hooks/useApi';
-import ApiService, { fetchOrders, createOrder } from './services/ApiService';
 import * as LocalStorage from './utils/localStorage';
-import * as FirebaseConfig from './firebase-config';
+import FirebaseService from './services/FirebaseService';
 import './App.css';
 
 function App() {
-  // For backward compatibility - keep the useApi hook
+  const [showOrderForm, setShowOrderForm] = useState(false);
+  const [showTestForm, setShowTestForm] = useState(false);
   const [apiOrders, setApiOrders, updateApiOrder, removeApiOrder, ordersLoading, resetApiOrders] = useApi('orders', []);
   const [archivedOrders, setArchivedOrders, updateArchivedOrder, removeArchivedOrder, archivesLoading, resetArchivedOrders] = useApi('archivedOrders', []);
   
@@ -31,7 +33,7 @@ function App() {
     // Initial load of orders
     const loadOrders = async () => {
       try {
-        const firebaseOrders = await FirebaseConfig.getOrders();
+        const firebaseOrders = await FirebaseService.getOrders();
         if (firebaseOrders && firebaseOrders.length > 0) {
           console.log('Loaded orders from Firebase:', firebaseOrders.length);
           setOrders(firebaseOrders);
@@ -45,7 +47,7 @@ function App() {
             // If we have localStorage orders but no Firebase orders, save them to Firebase
             savedOrders.forEach(async (order) => {
               try {
-                await FirebaseConfig.saveOrder(order);
+                await FirebaseService.createOrder(order);
               } catch (err) {
                 console.error('Error saving localStorage order to Firebase:', err);
               }
@@ -62,7 +64,7 @@ function App() {
     loadOrders();
     
     // Set up real-time listener for Firebase updates
-    const unsubscribe = FirebaseConfig.subscribeToOrders((updatedOrders) => {
+    const unsubscribe = FirebaseService.subscribeToOrders((updatedOrders) => {
       console.log('Received real-time order update from Firebase:', updatedOrders.length);
       setOrders(updatedOrders);
     });
@@ -75,43 +77,16 @@ function App() {
   useEffect(() => {
     const initializeOrderData = async () => {
       try {
-        // Only fetch from API or create sample data if we have no orders in localStorage
+        // Only fetch from API or create sample data if we have no orders already
         if (orders.length === 0) {
-          console.log('No orders found in React state, trying localStorage');
-          
-          // Try to load from localStorage first
-          const savedOrders = LocalStorage.loadOrders();
-          if (savedOrders && savedOrders.length > 0) {
-            console.log('Loaded orders from localStorage:', savedOrders.length);
-            setOrders(savedOrders);
-            setApiOrders(savedOrders);
-            return;
-          }
-          
-          try {
-            // Then try to fetch from API if nothing in localStorage
-            console.log('No orders in localStorage, trying API');
-            const fetchedOrders = await fetchOrders();
-            if (fetchedOrders && fetchedOrders.length > 0) {
-              console.log('Loaded orders from API:', fetchedOrders.length);
-              setOrders(fetchedOrders);
-              setApiOrders(fetchedOrders);
-              // Save to localStorage for persistence
-              LocalStorage.saveOrders(fetchedOrders);
-              return;
-            }
-          } catch (apiError) {
-            console.log('API unavailable, using sample data');
-          }
-          
-          // If both localStorage and API fail, initialize with sample data
-          console.log('Initializing sample data...');
+          console.log('No orders found, initializing with sample data...');
           const initialOrders = [];
           
           // Generate several sample orders
           for (const order of sampleOrders) {
             try {
-              const newOrder = await createOrder(order);
+              // Try to save directly to Firebase first
+              const newOrder = await FirebaseService.createOrder(order);
               initialOrders.push(newOrder);
             } catch (error) {
               console.error('Error creating sample order:', error);
@@ -120,15 +95,7 @@ function App() {
           
           if (initialOrders.length > 0) {
             console.log('Created sample orders:', initialOrders.length);
-            setOrders(initialOrders);
-            setApiOrders(initialOrders);
-            // Save sample orders to localStorage for persistence
-            LocalStorage.saveOrders(initialOrders);
           }
-        } else {
-          console.log('Using existing orders from React state:', orders.length);
-          // Make sure localStorage is up to date with current state
-          LocalStorage.saveOrders(orders);
         }
       } catch (error) {
         console.error('Error initializing order data:', error);
@@ -136,286 +103,299 @@ function App() {
     };
     
     initializeOrderData();
-  }, []);  // Only run once on component mount
-  
-  // Clear all orders function used by Dashboard
-  const clearAllOrders = () => {
-    setOrders([]);
-    // Use the utility function to clear storage
-    LocalStorage.clearStorage();
-    resetApiOrders();
-    console.log('All orders have been cleared');
-  };
-  
-  // If no orders exist yet, seed with sample data (only once)
-  useEffect(() => {
-    const initializeSampleData = async () => {
-      if (orders.length === 0 && !localStorage.getItem('savedOrders')) {
-        console.log('Initializing sample data...');
-        const initialOrders = [];
-        
-        // Generate several sample orders
-        for (const order of sampleOrders) {
-          try {
-            const newOrder = await createOrder(order);
-            initialOrders.push(newOrder);
-          } catch (error) {
-            console.error('Error creating sample order:', error);
-          }
-        }
-        
-        // Update both API state and local state
-        setApiOrders(initialOrders);
-        setOrders(initialOrders);
-        
-        // Save to localStorage
-        localStorage.setItem('savedOrders', JSON.stringify(initialOrders));
-      }
-    };
-    
-    initializeSampleData();
-  }, [orders]);
-  
-  const [showOrderForm, setShowOrderForm] = useState(false);
+  }, [orders.length]); // Only run if orders array is empty
 
-  // Function to clear all orders (for testing/development)
-  const resetAllData = () => {
-    // Clear both state and localStorage
-    setOrders([]);
-    setApiOrders([]);
-    setArchivedOrders([]);
-    localStorage.removeItem('savedOrders');
-    localStorage.removeItem('pizzaCooked');
-    resetApiOrders();
-    resetArchivedOrders();
-  };
-  
-  // Set document title
-  useEffect(() => {
-    document.title = "John Dough's Sourdough Pizzeria Dashboard";
-    
-    // Listen for order-updated events (used for forcing re-renders)
-    const handleOrderUpdated = (event) => {
-      if (event.detail && event.detail.orders) {
-        setOrders(event.detail.orders);
+  // Clear all orders function used by Dashboard
+  const clearAllOrders = async () => {
+    try {
+      // Clear from localStorage
+      LocalStorage.clearStorage();
+      
+      // Clear from state
+      setOrders([]);
+      resetApiOrders();
+      
+      // Try to delete from Firebase
+      const allOrders = await FirebaseConfig.getOrders();
+      for (const order of allOrders) {
+        try {
+          await FirebaseConfig.deleteOrder(order.id);
+        } catch (error) {
+          console.error('Error deleting order from Firebase:', error);
+        }
       }
-    };
-    
-    window.addEventListener('order-updated', handleOrderUpdated);
-    
-    return () => {
-      window.removeEventListener('order-updated', handleOrderUpdated);
-    };
-  }, []);
+      
+      console.log('All orders have been cleared');
+    } catch (error) {
+      console.error('Error clearing orders:', error);
+    }
+  };
 
   // Handle new orders from the order form
   const handleNewOrder = async (orderData) => {
     console.log('Received new order:', orderData);
     try {
-      // Save order to Firebase for persistence
-      const firebaseOrder = await FirebaseConfig.saveOrder(orderData);
+      // Save order to Firebase for persistence using the new FirebaseService
+      console.log('Creating order through FirebaseService');
+      const firebaseOrder = await FirebaseService.createOrder(orderData);
       console.log('New order saved to Firebase:', firebaseOrder);
       
-      // We don't need to update local state since the Firebase subscription will handle it
-      // But add it to API state if available
-      setApiOrders([...apiOrders, firebaseOrder]);
-      
-      // Also save to localStorage as backup
-      const updatedOrders = [...orders, firebaseOrder];
-      LocalStorage.saveOrders(updatedOrders);
-      
+      // No need to save to localStorage since we're using Firebase as single source of truth
+      // Just update the state for immediate UI display until Firebase real-time update comes in
       setShowOrderForm(false);
       return firebaseOrder;
     } catch (error) {
-      console.error('Error creating new order:', error);
+      console.error('Error creating new order through FirebaseService:', error);
       
-      // Fallback to local storage only if Firebase fails
+      // Try direct Firestore access as a fallback
       try {
-        // Generate a local ID
-        const localOrder = {
+        console.log('Attempting to create order through direct Firestore access');
+        const { collection, addDoc } = await import('firebase/firestore');
+        
+        // Create a clean order object
+        const orderId = `order-${Date.now()}`;
+        const cleanOrder = {
           ...orderData,
-          id: `local-${Date.now()}`,
-          orderId: `LOCAL-${Date.now().toString().slice(-4)}`,
-          _isLocal: true,
-          createdAt: new Date().toISOString()
+          id: orderId,
+          orderId: orderId,
+          createdAt: orderData.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         };
         
-        // Update local state
-        const updatedOrders = [...orders, localOrder];
-        setOrders(updatedOrders);
-        LocalStorage.saveOrders(updatedOrders);
+        // Add to Firestore directly
+        const ordersCollection = collection(FirebaseService.db, 'orders');
+        const docRef = await addDoc(ordersCollection, cleanOrder);
+        console.log('Order created successfully via direct Firestore access, ID:', docRef.id);
         
-        console.log('Created local fallback order:', localOrder);
+        // Update the order with the new document ID
+        const savedOrder = {
+          ...cleanOrder,
+          id: docRef.id
+        };
+        
         setShowOrderForm(false);
-        return localOrder;
-      } catch (localError) {
-        console.error('Complete failure creating order:', localError);
+        return savedOrder;
+      } catch (directError) {
+        console.error('Complete failure creating order via all methods:', directError);
+        alert('Could not create order. Please check console for details.');
         return null;
       }
     }
   };
 
-  // Handle status changes for orders
-  const handleStatusChange = async (orderId, newStatus) => {
-    try {
-      // Find the order to update
-      const orderToUpdate = orders.find(order => order.orderId === orderId || order.id === orderId);
-      
-      if (!orderToUpdate) {
-        console.error(`Order with ID ${orderId} not found`);
-        return;
-      }
-      
-      console.log(`Changing status for order ${orderId}:`, newStatus);
-      let updatedFields = {};
-      
-      }
+  // Handle order changes
+  const handleStatusChange = async (orderId, status) => {
+    // Find the order to update
+    const orderToUpdate = orders.find(order => order.orderId === orderId || order.id === orderId);
+    
+    if (!orderToUpdate) {
+      console.error(`Order with ID ${orderId} not found`);
+      return;
     }
     
-    if (initialOrders.length > 0) {
-      console.log('Created sample orders:', initialOrders.length);
-      setOrders(initialOrders);
-      setApiOrders(initialOrders);
-      // Save sample orders to localStorage for persistence
-      LocalStorage.saveOrders(initialOrders);
+    console.log(`Changing status for order ${orderId}:`, status);
+    
+    // Determine what to update based on the status
+    let updatedFields = {};
+    
+    if (typeof status === 'object' && (status.id || status.orderId)) {
+      // If status is a complete order object, use it directly
+      updatedFields = { ...status };
+    } else if (typeof status === 'string') {
+      // If status is a string, it's a status change
+      updatedFields = {
+        status: status,
+        completed: status === 'delivered'
+      };
+    } else if (typeof status === 'boolean') {
+      // If status is a boolean, it's a completion toggle
+      updatedFields = {
+        completed: status,
+        status: status ? 'delivered' : 'pending'
+      };
+    } else if (typeof status === 'object') {
+      // If status is an object with specific fields, update those fields
+      updatedFields = { ...status };
     }
-  } else {
-    console.log('Using existing orders from React state:', orders.length);
-    // Make sure localStorage is up to date with current state
-    LocalStorage.saveOrders(orders);
-  }
-} catch (error) {
-  console.error('Error initializing order data:', error);
-};
-
-initializeOrderData();
-}, []);  // Only run once on component mount
-
-// Clear all orders function used by Dashboard
-const clearAllOrders = () => {
-  setOrders([]);
-  // Use the utility function to clear storage
-  LocalStorage.clearStorage();
-  resetApiOrders();
-  console.log('All orders have been cleared');
-};
-
-// If no orders exist yet, seed with sample data (only once)
-useEffect(() => {
-  const initializeSampleData = async () => {
-    if (orders.length === 0 && !localStorage.getItem('savedOrders')) {
-      console.log('Initializing sample data...');
-      const initialOrders = [];
+    
+    try {
+      // Update in Firebase
+      await FirebaseConfig.updateOrder(orderId, updatedFields);
       
-      // Generate several sample orders
-      for (const order of sampleOrders) {
-        try {
-          const newOrder = await createOrder(order);
-          initialOrders.push(newOrder);
-          if (updatedFields.cooked && Array.isArray(updatedFields.cooked)) {
-            // Use the specialized endpoint for pizza status
-            await ApiService.updatePizzaStatus(orderId, updatedFields.cooked, updatedFields.status);
-          } else {
-            // Regular status update
-            await updateApiOrder(orderId, updatedFields);
-          }
-        } catch (error) {
-          console.error('API error in handleStatusChange:', error);
-          // Continue anyway since we've updated local state
+      // Also update in localStorage as backup
+      const updatedOrders = orders.map(order => {
+        if (order.id === orderId || order.orderId === orderId) {
+          return { ...order, ...updatedFields };
         }
+        return order;
+      });
+      
+      LocalStorage.saveOrders(updatedOrders);
+      
+      // Also save pizza state if it exists
+      if (updatedFields.cooked && Array.isArray(updatedFields.cooked)) {
+        LocalStorage.savePizzaState(orderId, updatedFields.cooked, updatedFields.status);
       }
       
-      console.log(`Order ${orderId} status updated successfully to:`, updatedFields.status || newStatus);
-      
-      // Trigger events with the updated orders for better reactivity
-      setTimeout(() => {
-        // Dispatch order-updated event for components that listen to this
-        const orderEvent = new CustomEvent('order-updated', { 
-          detail: { orders } 
-        });
-        window.dispatchEvent(orderEvent);
-        
-        // Also dispatch force-render event
-        const renderEvent = new CustomEvent('force-render', { 
-          detail: { timestamp: Date.now() } 
-        });
-        window.dispatchEvent(renderEvent);
-      }, 50);
+      return { id: orderId, ...updatedFields };
     } catch (error) {
-      console.error(`Error updating order ${orderId} status:`, error);
-      // Try API update only if we're in production or if it's explicitly required
-      if (process.env.NODE_ENV !== 'development') {
-        alert('There was a problem updating the order status. Please try again.');
-      }
+      console.error('Error updating order status:', error);
+      return null;
     }
   };
 
-  return (
-    <Router>
-      <div className="flex min-h-screen bg-secondary-dark text-primary" style={{ '--color-primary': '#e76f51', '--color-secondary': '#2a2d3e' }}>
-        <Sidebar setShowOrderForm={setShowOrderForm} />
-        <div className="flex-1">
-          {/* Order Form Modal - Now at App level so it's accessible from any page */}
-          {showOrderForm && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-              <div className="relative w-full max-w-6xl">
-                <OrderForm onSubmit={handleNewOrder} setShowOrderForm={setShowOrderForm} />
-              </div>
-            </div>
-          )}
-          
-          <Routes>
-            <Route 
-              path="/" 
-              element={
-                <DashboardPage 
-                  orders={orders}
-                  setOrders={setOrders}
-                  onStatusChange={handleStatusChange}
-                  clearAllOrders={clearAllOrders}
-                />
-              } 
-            />
-            <Route 
-              path="/kitchen" 
-              element={
-                <KitchenDisplayPage 
-                  orders={orders}
-                  onStatusChange={handleStatusChange}
-                />
-              } 
-            />
-            <Route 
-              path="/inventory" 
-              element={
-                <InventoryPage 
-                  orders={orders}
-                  archivedOrders={archivedOrders}
-                />
-              } 
-            />
-            <Route 
-              path="/orders" 
-              element={
-                <OrdersPage 
-                  orders={orders}
-                  setOrders={setOrders}
-                  archivedOrders={archivedOrders}
-                />
-              } 
-            />
-            <Route 
-              path="/analytics" 
-              element={
-                <AnalyticsPage 
-                  orders={orders}
-                  archivedOrders={archivedOrders}
-                />
-              } 
-            />
-          </Routes>
+  // Handle updating pizza cooked status
+  const handlePizzaStatusChange = async (orderId, pizzaIdx, isCooked) => {
+    try {
+      // Try to update pizza status in Firebase
+      const result = await FirebaseConfig.updatePizzaStatus(orderId, pizzaIdx, isCooked);
+      return result;
+    } catch (error) {
+      console.error('Error updating pizza status:', error);
+      
+      // Update in local state as fallback
+      const orderToUpdate = orders.find(o => o.id === orderId || o.orderId === orderId);
+      if (orderToUpdate) {
+        const updatedPizzas = [...(orderToUpdate.pizzas || [])];
+        if (updatedPizzas[pizzaIdx]) {
+          updatedPizzas[pizzaIdx] = {
+            ...updatedPizzas[pizzaIdx],
+            isCooked: isCooked
+          };
+        }
+        
+        let cookedStatus = orderToUpdate.cooked || [];
+        while (cookedStatus.length < updatedPizzas.length) {
+          cookedStatus.push(false);
+        }
+        cookedStatus[pizzaIdx] = isCooked;
+        
+        const updatedOrder = {
+          ...orderToUpdate,
+          pizzas: updatedPizzas,
+          cooked: cookedStatus
+        };
+        
+        // Update orders array
+        const updatedOrders = orders.map(order => {
+          if (order.id === orderId || order.orderId === orderId) {
+            return updatedOrder;
+          }
+          return order;
+        });
+        
+        // Update state
+        setOrders(updatedOrders);
+        
+        // Save to localStorage
+        LocalStorage.saveOrders(updatedOrders);
+        LocalStorage.savePizzaState(orderId, cookedStatus, orderToUpdate.status);
+        
+        return updatedOrder;
+      }
+      return null;
+    }
+  };
+
+  // Archive an order
+  const handleArchiveOrder = async (orderId) => {
+    try {
+      const orderToArchive = orders.find(o => o.id === orderId || o.orderId === orderId);
+      if (!orderToArchive) {
+        console.error(`Order ${orderId} not found for archiving`);
+        return;
+      }
+      
+      // Mark order as archived
+      const archivedOrder = {
+        ...orderToArchive,
+        archived: true,
+        archivedAt: new Date().toISOString()
+      };
+      
+      // Save to archived collection in Firebase
+      await FirebaseService.archiveOrder(orderId);
+      
+      // The archiveOrder function already handles the deletion of the original order
+      // so we don't need a separate deleteOrder call
+      
+      // Update local state
+      const updatedOrders = orders.filter(o => o.id !== orderId && o.orderId !== orderId);
+      setOrders(updatedOrders);
+      
+      // Update localStorage
+      LocalStorage.saveOrders(updatedOrders);
+      
+      console.log(`Order ${orderId} archived successfully`);
+    } catch (error) {
+      console.error(`Error archiving order ${orderId}:`, error);
+    }
+  };
+
+                    isLoading={isLoading}
+                    onStatusChange={handleStatusChange}
+                    onPizzaStatusChange={handlePizzaStatusChange}
+                    onArchiveOrder={handleArchiveOrder}
+                    clearAllOrders={clearAllOrders}
+                  />
+                } 
+              />
+              <Route 
+                path="/kitchen" 
+                element={
+                  <KitchenDisplayPage 
+                    orders={orders} 
+                    isLoading={isLoading}
+                    onPizzaStatusChange={handlePizzaStatusChange}
+                  />
+                } 
+              />
+              <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/orders" element={<OrdersPage orders={orders} />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/firebase-test" element={<FirebaseTest />} />
+            </Routes>
+          </main>
         </div>
       </div>
+      
+      {showOrderForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">New Order</h2>
+              <button 
+                onClick={() => setShowOrderForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                &times;
+              </button>
+            </div>
+            <SimpleOrderForm 
+              onClose={() => setShowOrderForm(false)} 
+            />
+          </div>
+        </div>
+      )}
+      
+      {showTestForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Test Form</h2>
+              <button 
+                onClick={() => setShowTestForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                &times;
+              </button>
+            </div>
+            <TestOrderForm 
+              onClose={() => setShowTestForm(false)} 
+            />
+          </div>
+        </div>
+      )}
     </Router>
   );
 }

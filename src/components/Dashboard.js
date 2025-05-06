@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, Outlet, useLocation }
 import { MdDashboard, MdPeople, MdDescription, MdSettings, MdMenu, MdNotifications, MdInventory, MdHistory } from 'react-icons/md';
 import NavItem from './NavItem';
 import StatsCard from './StatsCard';
-import OrderForm from './OrderForm';
+import FirebaseDirectForm from './FirebaseDirectForm';
 import DashboardPage from './pages/DashboardPage';
 import CustomersPage from './pages/CustomersPage';
 import OrdersPage from './pages/OrdersPage';
@@ -223,10 +223,8 @@ const Dashboard = () => {
           {showOrderForm && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{position: 'fixed', zIndex: 9999}}>
               <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
-                <OrderForm 
-                  onSubmit={handleNewOrder} 
-                  orders={orders}
-                  setShowOrderForm={setShowOrderForm}
+                <FirebaseDirectForm 
+                  onClose={() => setShowOrderForm(false)}
                 />
               </div>
             </div>

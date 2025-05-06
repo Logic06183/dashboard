@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firebase Direct Test</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    h1 { text-align: center; color: #333; }
+    button { background: #4285F4; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    button:hover { background: #2a75f3; }
+    .result { margin-top: 20px; padding: 10px; background: #f0f0f0; border-radius: 4px; white-space: pre-wrap; font-family: monospace; }
+    .success { color: green; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Firebase Direct Test</h1>
+    <p>This is a minimal test of direct Firebase Firestore access.</p>
+    
+    <button id="testBtn">Create Test Order</button>
+    
+    <div id="result" class="result"></div>
+  </div>
+
+  <script>
+    // Initialize Firebase with your config
+    const firebaseConfig = {
+      apiKey: "AIzaSyA8ZVFJzBGfRDe1_vUVZd4t95G38jd3EpM",
+      authDomain: "pizza-dashboard-92057.firebaseapp.com",
+      projectId: "pizza-dashboard-92057",
+      storageBucket: "pizza-dashboard-92057.appspot.com",
+      messagingSenderId: "771301453042",
+      appId: "1:771301453042:web:4a8de5b6faa9da0da94e40"
+    };
+
+    // Initialize Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    
+    // Add event listener to the test button
+    document.getElementById('testBtn').addEventListener('click', async function() {
+      const resultEl = document.getElementById('result');
+      resultEl.innerHTML = 'Testing Firebase connection...';
+      
+      try {
+        // Create a test order
+        const testOrder = {
+          customerName: 'HTML Test',
+          createdAt: new Date().toISOString(),
+          orderTime: new Date().toISOString(),
+          status: 'pending',
+          pizzas: [
+            {
+              pizzaType: 'Margie',
+              quantity: 1,
+              totalPrice: 149,
+              isCooked: false
+            }
+          ],
+          cooked: [false],
+          testTimeStamp: Date.now(),
+          orderId: `html-test-${Date.now()}`
+        };
+        
+        // Add the order to Firestore
+        const docRef = await db.collection('orders').add(testOrder);
+        
+        resultEl.innerHTML = `<span class="success">SUCCESS! Order created with ID: ${docRef.id}</span>\n\nTest order data:\n${JSON.stringify(testOrder, null, 2)}`;
+      } catch (error) {
+        console.error('Error creating test order:', error);
+        resultEl.innerHTML = `<span class="error">ERROR: ${error.message}</span>`;
+      }
+    });
+  </script>
+</body>
+</html>

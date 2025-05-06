@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -13,11 +13,16 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+if (!firebase.apps.length) {
+  app = firebase.initializeApp(firebaseConfig);
+} else {
+  app = firebase.app(); // Get the default app if already initialized
+}
 
 // Initialize Firestore
-const db = getFirestore(app);
+const db = app.firestore();
 
-console.log('Firebase initialized with project ID:', firebaseConfig.projectId);
+console.log('Firebase compat initialized with project ID:', firebaseConfig.projectId);
 
-export { db };
+export { db, firebase }; // Export firebase as well if needed by other compat modules

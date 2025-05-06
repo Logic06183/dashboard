@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import StatsCard from '../StatsCard';
-import OrderManagement from '../OrderManagement';
 import CustomerTracking from '../CustomerTracking';
 import { motion } from 'framer-motion';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -227,6 +226,12 @@ const DashboardPage = ({ orders = [], setOrders, onStatusChange, clearAllOrders 
             {/* Development controls */}
             <div>
                   <div className="flex space-x-4">
+                <a 
+                  href="/firebase-test" 
+                  className="px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 focus:outline-none"
+                >
+                  Firebase Test Tool
+                </a>
                 <label className="inline-flex items-center cursor-pointer">
                   <input 
                     type="checkbox" 
@@ -273,14 +278,7 @@ const DashboardPage = ({ orders = [], setOrders, onStatusChange, clearAllOrders 
           />
         </div>
 
-        {/* Order Management Section */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Active Orders</h2>
-          <OrderManagement 
-            orders={sortedOrders} 
-            onStatusChange={handleStatusChange}
-          />
-        </div>
+        {/* Active Orders Section removed */}
 
         {/* Customer Tracking Section */}
         <div className="mt-8">

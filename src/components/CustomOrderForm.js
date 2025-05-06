@@ -1,6 +1,87 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+// Import Firebase directly to avoid any service abstraction issues
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/firestore';
+// Import FirebaseService for fallback
+import FirebaseService from '../services/FirebaseService';
+
+// Firebase configuration - including directly to ensure no import issues
+const firebaseConfig = {
+  apiKey: "AIzaSyA8ZVFJzBGfRDe1_vUVZd4t95G38jd3EpM",
+  authDomain: "pizza-dashboard-92057.firebaseapp.com",
+  projectId: "pizza-dashboard-92057",
+  storageBucket: "pizza-dashboard-92057.appspot.com",
+  messagingSenderId: "771301453042",
+  appId: "1:771301453042:web:4a8de5b6faa9da0da94e40"
+};
+
+// Initialize Firebase with a unique name to avoid conflicts
+let firebaseApp;
+let db;
 
 const CustomOrderForm = ({ onSubmit, setShowOrderForm }) => {
+  // Initialize Firebase when component mounts
+  useEffect(() => {
+    console.log('CustomOrderForm mounted');
+    
+    try {
+      // Initialize Firebase only if it hasn't been initialized yet
+      if (!firebase.apps.length) {
+        console.log('No Firebase apps exist, initializing new app');
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+      } else {
+        console.log('Firebase already initialized, getting existing app');
+        try {
+          // Try to get existing app with name 'orderForm'
+          firebaseApp = firebase.app('orderForm');
+          console.log('Got existing orderForm app');
+        } catch (e) {
+          // If not found, initialize with this name
+          console.log('Creating new Firebase app with name orderForm');
+          firebaseApp = firebase.initializeApp(firebaseConfig, 'orderForm');
+        }
+      }
+      
+      // Get Firestore instance
+      db = firebaseApp.firestore();
+      console.log('CustomOrderForm: Firebase initialized with compat API', !!db);
+      
+      // Verify FirebaseService is available
+      console.log('FirebaseService available:', !!FirebaseService);
+      if (FirebaseService && FirebaseService.createOrder) {
+        console.log('FirebaseService.createOrder is a function');
+      } else {
+        console.warn('FirebaseService.createOrder is not available or not a function');
+      }
+    } catch (error) {
+      console.error('Error initializing Firebase in CustomOrderForm:', error);
+    }
+    
+    return () => {
+      // Clean up when component unmounts
+      if (firebaseApp && firebaseApp.name === 'orderForm') {
+        console.log('Cleaning up Firebase app');
+        firebaseApp.delete().catch(error => console.error('Error cleaning up Firebase app:', error));
+      }
+    };
+  }, []);
+
+  // Add debug state to track form submission process
+  const [debugInfo, setDebugInfo] = useState({});
+  
+    // Test Firebase connection on component mount
+    const testConnection = async () => {
+      try {
+        console.log('Testing Firebase connection from CustomOrderForm...');
+        const testResult = await FirebaseService.getOrders();
+        console.log('Firebase connection test result:', testResult);
+      } catch (err) {
+        console.error('Firebase connection test failed:', err);
+      }
+    };
+    
+    testConnection();
+  }, []);
   const [platform, setPlatform] = useState('');
   const [customPlatform, setCustomPlatform] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -109,7 +190,7 @@ const CustomOrderForm = ({ onSubmit, setShowOrderForm }) => {
   };
 
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate required fields
@@ -140,15 +221,21 @@ const CustomOrderForm = ({ onSubmit, setShowOrderForm }) => {
             totalPrice: price * quantity,
             rowNumber: row + 1,
             specialInstructions,
-            notes: specialInstructions // For compatibility with existing code
+            notes: specialInstructions, // For compatibility with existing code
+            isCooked: false // Initialize as not cooked
           });
         }
       }
     }
     
-    // Create order object
-    const order = {
-      id: Date.now(),
+    // Check if we have pizzas
+    if (orderedPizzas.length === 0) {
+      alert('Please add at least one pizza to the order');
+      return;
+    }
+    
+    // Create order object with Firebase-friendly structure
+    const orderToCreate = {
       pizzas: orderedPizzas,
       status: 'pending',
       orderTime: new Date().toISOString(),
@@ -158,18 +245,131 @@ const CustomOrderForm = ({ onSubmit, setShowOrderForm }) => {
       prepTime: parseInt(prepTime) || 15,
       extraToppings,
       urgency: parseInt(prepTime) <= 15 ? 'high' : parseInt(prepTime) <= 30 ? 'medium' : 'low',
-      cooked: orderedPizzas.map(() => false) // Track cooking status for each pizza
+      cooked: orderedPizzas.map(() => false), // Track cooking status for each pizza
+      createdAt: new Date().toISOString()
     };
     
-    // Check if we have pizzas
-    if (orderedPizzas.length === 0) {
-      alert('Please add at least one pizza to the order');
-      return;
+    try {
+      setDebugInfo(prev => ({ ...prev, status: 'starting', orderData: orderToCreate }));
+      console.log('Starting order creation with order data:', orderToCreate);
+      
+      // Log more detailed info about the order we're trying to create
+      console.log('Order details:', {
+        customerName: orderToCreate.customerName,
+        platform: orderToCreate.platform,
+        pizzaCount: orderToCreate.pizzas.length,
+        totalAmount: orderToCreate.totalAmount
+      });
+      
+      // Submit order directly to Firebase with more robust error handling
+      console.log('Calling createOrder function...');
+      setDebugInfo(prev => ({ ...prev, status: 'calling_firebase' }));
+      
+      // Use direct Firestore access since we know this works
+      console.log('Using direct Firestore access to create order...');
+      let savedOrder;
+      
+      // Check if we have a valid Firestore instance
+      if (!db || typeof db.collection !== 'function') {
+        console.error('Firebase Firestore not properly initialized. Attempting to reinitialize...');
+        
+        // Last attempt to initialize Firebase
+        try {
+          // Try to get existing app
+          if (firebase.apps.length > 0) {
+            firebaseApp = firebase.app();
+          } else {
+            firebaseApp = firebase.initializeApp(firebaseConfig);
+          }
+          
+          db = firebaseApp.firestore();
+          console.log('Reinitialized Firestore in submission handler:', !!db);
+        } catch (initError) {
+          console.error('Failed to reinitialize Firebase:', initError);
+          throw new Error('Could not initialize Firebase: ' + initError.message);
+        }
+      }
+      
+      if (!db || typeof db.collection !== 'function') {
+        throw new Error('Firestore db is still not available after reinitialization');
+      }
+      
+      console.log('Got valid Firebase Firestore instance');
+      
+      // Create a clean ID for the order
+      const orderId = `order-${Date.now()}`;
+      const cleanedOrderData = {
+        ...orderToCreate,
+        id: orderId,
+        orderId: orderId,
+        createdAt: orderToCreate.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        // Add a unique debugging marker
+        _source: 'direct_compat_api',
+        _timestamp: Date.now()
+      };
+      
+      console.log('Clean order data prepared:', {
+        id: cleanedOrderData.id,
+        customerName: cleanedOrderData.customerName,
+        pizzaCount: cleanedOrderData.pizzas.length
+      });
+      
+      // Directly use the firebase compat API
+      console.log('Calling db.collection("orders").add() with compat API...');
+      
+      try {
+        // First attempt - direct compat API call
+        const docRef = await db.collection('orders').add(cleanedOrderData);
+        console.log('SUCCESS! Order created with ID:', docRef.id);
+        
+        // Update savedOrder with the document ID
+        savedOrder = {
+          ...cleanedOrderData,
+          id: docRef.id
+        };
+      } catch (directError) {
+        console.error('Error with direct Firestore compat API:', directError);
+        
+        // Log detailed error information
+        console.error('Error code:', directError.code);
+        console.error('Error name:', directError.name);
+        console.error('Full error object:', JSON.stringify(directError, Object.getOwnPropertyNames(directError)));
+        
+        // Try fallback to FirebaseService if available
+        if (FirebaseService && typeof FirebaseService.createOrder === 'function') {
+          console.log('Trying fallback to FirebaseService.createOrder');
+          savedOrder = await FirebaseService.createOrder(orderToCreate);
+          console.log('Order created via service fallback');
+        } else {
+          throw new Error('Direct Firestore failed and no fallback service available: ' + directError.message);
+        }
+      }
+      
+      console.log('Order created successfully:', savedOrder);
+      setDebugInfo(prev => ({ ...prev, status: 'success', savedOrder }));
+      
+      // Call onSubmit to notify parent component if needed
+      if (onSubmit) {
+        console.log('Calling onSubmit with saved order');
+        onSubmit(savedOrder);
+      } else {
+        console.log('No onSubmit handler provided');
+      }
+      
+      // Close the form
+      setShowOrderForm(false);
+    } catch (error) {
+      console.error('Detailed error creating order:', error);
+      console.error('Error stack:', error.stack);
+      setDebugInfo(prev => ({ 
+        ...prev, 
+        status: 'error', 
+        error: error.message, 
+        stack: error.stack 
+      }));
+      alert(`Error creating order: ${error.message}. Check console for details.`);
     }
-    
-    // Submit order
-    onSubmit(order);
-    setShowOrderForm(false);
   };
 
   return (

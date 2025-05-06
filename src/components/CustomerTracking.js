@@ -1,58 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import * as LocalStorage from '../utils/localStorage';
+import useFirebaseOrders from '../hooks/useFirebaseOrders';
 
-const CustomerTracking = ({ orders = [] }) => {
-  // Single source of truth - don't duplicate the orders from props
-  const [lastUpdateTime, setLastUpdateTime] = useState(Date.now());
+const CustomerTracking = () => {
+  // Use our Firebase hook to get real-time order updates directly from Firestore
+  const { data: orders, loading, error } = useFirebaseOrders();
   
-  // Apply saved state to orders for display purposes only
-  const getEnhancedOrders = () => {
-    if (!orders || !orders.length) return [];
-    
-    try {
-      const savedStates = localStorage.getItem('pizzaCooked');
-      if (!savedStates) return orders;
-      
-      const parsedStates = JSON.parse(savedStates);
-      
-      return orders.map(order => {
-        const orderId = order.id || order.orderId;
-        const savedOrder = parsedStates[orderId];
-        
-        if (savedOrder) {
-          return {
-            ...order,
-            status: savedOrder.status || order.status,
-            cooked: savedOrder.cooked || order.cooked
-          };
-        }
-        return order;
-      });
-    } catch (error) {
-      console.error('Error enhancing orders with saved state:', error);
-      return orders;
-    }
-  };
+  // No need for getEnhancedOrders() - Firebase data is already complete and authoritative
   
-  // Set up event listeners - runs only once on mount
-  useEffect(() => {
-    const handleOrderUpdate = () => {
-      // Just force a re-render by updating timestamp
-      setLastUpdateTime(Date.now());
-    };
-    
-    // Set up event listeners
-    window.addEventListener('order-updated', handleOrderUpdate);
-    window.addEventListener('order-status-updated', handleOrderUpdate);
-    window.addEventListener('force-render', handleOrderUpdate);
-    
-    // Clean up event listeners on unmount
-    return () => {
-      window.removeEventListener('order-updated', handleOrderUpdate);
-      window.removeEventListener('order-status-updated', handleOrderUpdate);
-      window.removeEventListener('force-render', handleOrderUpdate);
-    };
-  }, []); // Empty dependency array - runs once on mount
+  // No need for event listeners - Firebase real-time updates handle this automatically
   const getOrderStatus = (status) => {
     const statusSteps = {
       'pending': 1,
@@ -76,8 +31,27 @@ const CustomerTracking = ({ orders = [] }) => {
     };
   };
 
-  // Get the orders with enhanced state for rendering
-  const enhancedOrders = getEnhancedOrders();
+  // Check for loading, error states, and empty orders
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h2 className="text-xl font-semibold">Track Your Order</h2>
+        <div className="flex justify-center mt-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-700"></div>
+        </div>
+        <p className="text-gray-500 mt-2 text-center">Loading orders...</p>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm p-6">
+        <h2 className="text-xl font-semibold">Track Your Order</h2>
+        <p className="text-red-500 mt-4">Error loading orders: {error.message}</p>
+      </div>
+    );
+  }
   
   if (!orders || orders.length === 0) {
     return (
@@ -91,7 +65,7 @@ const CustomerTracking = ({ orders = [] }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm p-6">
       <h2 className="text-xl font-semibold mb-4">Track Your Order</h2>
-      {enhancedOrders.map((order) => (
+      {orders.map((order) => (
         <div key={order.orderId} className="mb-8 last:mb-0">
           <div className="flex justify-between items-center mb-4">
             <div>
@@ -126,8 +100,8 @@ const CustomerTracking = ({ orders = [] }) => {
             {order.pizzas && order.pizzas.length > 0 ? (
               <div className="space-y-2">
                 {order.pizzas.map((pizza, idx) => (
-                  <div key={idx} className="text-sm">
-                    <p>{pizza.quantity}x {pizza.pizzaType}</p>
+                  <div key={`${order.orderId}-pizza-${idx}`} className="text-sm">
+                    <p>{pizza.quantity}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}</p>
                   </div>
                 ))}
               </div>

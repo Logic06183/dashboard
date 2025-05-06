@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import OrderManagement from '../OrderManagement';
 
-const OrdersPage = ({ orders, setOrders }) => {
+const OrdersPage = ({ orders }) => {
   const [showCompleted, setShowCompleted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // No pizza change functionality in this version
   
   // Update current time every 30 seconds
   useEffect(() => {
@@ -55,6 +56,49 @@ const OrdersPage = ({ orders, setOrders }) => {
     });
   }, [orders, showCompleted, currentTime]);
 
+  // Format time in South African format (24-hour)
+  const formatSATime = (date) => {
+    if (!date) return 'No time';
+    
+    try {
+      if (typeof date === 'string') {
+        date = new Date(date);
+      }
+      return date.toLocaleTimeString('en-ZA', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid time';
+    }
+  };
+  
+  // Calculate time status (minutes left or late)
+  const getTimeStatus = (dueTime) => {
+    if (!dueTime) return null;
+    
+    try {
+      const dueDate = new Date(dueTime);
+      const now = new Date();
+      const minutesDiff = Math.floor((dueDate - now) / 60000);
+      
+      if (minutesDiff < 0) {
+        return { status: 'late', minutes: Math.abs(minutesDiff) };
+      } else if (minutesDiff <= 15) {
+        return { status: 'critical', minutes: minutesDiff };
+      } else if (minutesDiff <= 30) {
+        return { status: 'urgent', minutes: minutesDiff };
+      } else {
+        return { status: 'normal', minutes: minutesDiff };
+      }
+    } catch (error) {
+      console.error('Error calculating time status:', error);
+      return null;
+    }
+  };
+  
   // Group orders by priority and completion status
   const groupedOrders = useMemo(() => {
     const groups = {
@@ -119,16 +163,50 @@ const OrdersPage = ({ orders, setOrders }) => {
             <span className="inline-block w-3 h-3 bg-red-600 rounded-full"></span>
             Late Orders ({groupedOrders.late.length})
           </h3>
-          <OrderManagement 
-            orders={groupedOrders.late} 
-            onStatusChange={(orderId, newStatus) => {
-              setOrders(prev => prev.map(order => 
-                (order.id === orderId || order.orderId === orderId) 
-                  ? {...order, status: newStatus} 
-                  : order
-              ));
-            }} 
-          />
+          <div className="grid gap-4">
+            {groupedOrders.late.map(order => (
+              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-red-600">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold">{order.customer}</h4>
+                  <span className="text-red-600 font-medium">Late</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <p>Order #{order.id || order.orderId}</p>
+                  <div className="flex items-center gap-2">
+                    {order.orderTime && (
+                      <span>Ordered: {formatSATime(order.orderTime)}</span>
+                    )}
+                    {order.dueTime && (
+                      <span className="font-medium">Due: 
+                        <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
+                          {formatSATime(order.dueTime)}
+                        </span>
+                        {getTimeStatus(order.dueTime) && (
+                          <span className="ml-2 text-xs">
+                            {getTimeStatus(order.dueTime).status === 'late' 
+                              ? `(${getTimeStatus(order.dueTime).minutes}m late)` 
+                              : `(${getTimeStatus(order.dueTime).minutes}m left)`}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {order.pizzas && (
+                  <div className="mt-2">
+                    {order.pizzas.map((pizza, i) => (
+                      <div key={i} className="text-sm py-1 border-b border-gray-100">
+                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                        {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
+                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
       
@@ -139,16 +217,50 @@ const OrdersPage = ({ orders, setOrders }) => {
             <span className="inline-block w-3 h-3 bg-orange-600 rounded-full"></span>
             Urgent Orders ({groupedOrders.urgent.length})
           </h3>
-          <OrderManagement 
-            orders={groupedOrders.urgent} 
-            onStatusChange={(orderId, newStatus) => {
-              setOrders(prev => prev.map(order => 
-                (order.id === orderId || order.orderId === orderId)
-                  ? {...order, status: newStatus} 
-                  : order
-              ));
-            }} 
-          />
+          <div className="grid gap-4">
+            {groupedOrders.urgent.map(order => (
+              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-orange-600">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold">{order.customer}</h4>
+                  <span className="text-orange-600 font-medium">Urgent</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <p>Order #{order.id || order.orderId}</p>
+                  <div className="flex items-center gap-2">
+                    {order.orderTime && (
+                      <span>Ordered: {formatSATime(order.orderTime)}</span>
+                    )}
+                    {order.dueTime && (
+                      <span className="font-medium">Due: 
+                        <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
+                          {formatSATime(order.dueTime)}
+                        </span>
+                        {getTimeStatus(order.dueTime) && (
+                          <span className="ml-2 text-xs">
+                            {getTimeStatus(order.dueTime).status === 'late' 
+                              ? `(${getTimeStatus(order.dueTime).minutes}m late)` 
+                              : `(${getTimeStatus(order.dueTime).minutes}m left)`}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {order.pizzas && (
+                  <div className="mt-2">
+                    {order.pizzas.map((pizza, i) => (
+                      <div key={i} className="text-sm py-1 border-b border-gray-100">
+                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                        {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
+                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -159,16 +271,50 @@ const OrdersPage = ({ orders, setOrders }) => {
             <span className="inline-block w-3 h-3 bg-blue-600 rounded-full"></span>
             Normal Orders ({groupedOrders.normal.length})
           </h3>
-          <OrderManagement 
-            orders={groupedOrders.normal}
-            onStatusChange={(orderId, newStatus) => {
-              setOrders(prev => prev.map(order => 
-                (order.id === orderId || order.orderId === orderId)
-                  ? {...order, status: newStatus} 
-                  : order
-              ));
-            }} 
-          />
+          <div className="grid gap-4">
+            {groupedOrders.normal.map(order => (
+              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-blue-600">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold">{order.customer}</h4>
+                  <span className="text-blue-600 font-medium">Normal</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <p>Order #{order.id || order.orderId}</p>
+                  <div className="flex items-center gap-2">
+                    {order.orderTime && (
+                      <span>Ordered: {formatSATime(order.orderTime)}</span>
+                    )}
+                    {order.dueTime && (
+                      <span className="font-medium">Due: 
+                        <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
+                          {formatSATime(order.dueTime)}
+                        </span>
+                        {getTimeStatus(order.dueTime) && (
+                          <span className="ml-2 text-xs">
+                            {getTimeStatus(order.dueTime).status === 'late' 
+                              ? `(${getTimeStatus(order.dueTime).minutes}m late)` 
+                              : `(${getTimeStatus(order.dueTime).minutes}m left)`}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {order.pizzas && (
+                  <div className="mt-2">
+                    {order.pizzas.map((pizza, i) => (
+                      <div key={i} className="text-sm py-1 border-b border-gray-100">
+                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                        {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
+                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
       
@@ -179,16 +325,50 @@ const OrdersPage = ({ orders, setOrders }) => {
             <span className="inline-block w-3 h-3 bg-green-600 rounded-full"></span>
             Completed Orders ({groupedOrders.completed.length})
           </h3>
-          <OrderManagement 
-            orders={groupedOrders.completed}
-            onStatusChange={(orderId, newStatus) => {
-              setOrders(prev => prev.map(order => 
-                (order.id === orderId || order.orderId === orderId)
-                  ? {...order, status: newStatus} 
-                  : order
-              ));
-            }} 
-          />
+          <div className="grid gap-4">
+            {groupedOrders.completed.map(order => (
+              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-green-600">
+                <div className="flex justify-between items-center">
+                  <h4 className="font-semibold">{order.customer}</h4>
+                  <span className="text-green-600 font-medium">Completed</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-600">
+                  <p>Order #{order.id || order.orderId}</p>
+                  <div className="flex items-center gap-2">
+                    {order.orderTime && (
+                      <span>Ordered: {formatSATime(order.orderTime)}</span>
+                    )}
+                    {order.dueTime && (
+                      <span className="font-medium">Due: 
+                        <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
+                          {formatSATime(order.dueTime)}
+                        </span>
+                        {getTimeStatus(order.dueTime) && (
+                          <span className="ml-2 text-xs">
+                            {getTimeStatus(order.dueTime).status === 'late' 
+                              ? `(${getTimeStatus(order.dueTime).minutes}m late)` 
+                              : `(${getTimeStatus(order.dueTime).minutes}m left)`}
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {order.pizzas && (
+                  <div className="mt-2">
+                    {order.pizzas.map((pizza, i) => (
+                      <div key={i} className="text-sm py-1 border-b border-gray-100">
+                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                        {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
+                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

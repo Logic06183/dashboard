@@ -6,15 +6,18 @@ import InventoryPage from './components/pages/InventoryPage';
 import OrdersPage from './components/pages/OrdersPage';
 import AnalyticsPage from './components/pages/AnalyticsPage';
 import Sidebar from './components/Sidebar';
-import CustomOrderForm from './components/CustomOrderForm';
+import HookOrderTest from './components/HookOrderTest';
+import FirebaseDirectForm from './components/FirebaseDirectForm';
+import OrderCleanupUtility from './components/OrderCleanupUtility';
 import { sampleOrders } from './sampleOrders';
 import { useApi } from './hooks/useApi';
 import * as LocalStorage from './utils/localStorage';
-import * as FirebaseConfig from './firebase-config';
+import FirebaseService from './services/FirebaseService';
 import './App.css';
 
 function App() {
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [showTestForm, setShowTestForm] = useState(false);
   const [apiOrders, setApiOrders, updateApiOrder, removeApiOrder, ordersLoading, resetApiOrders] = useApi('orders', []);
   const [archivedOrders, setArchivedOrders, updateArchivedOrder, removeArchivedOrder, archivesLoading, resetArchivedOrders] = useApi('archivedOrders', []);
   
@@ -30,7 +33,7 @@ function App() {
     // Initial load of orders
     const loadOrders = async () => {
       try {
-        const firebaseOrders = await FirebaseConfig.getOrders();
+        const firebaseOrders = await FirebaseService.getOrders();
         if (firebaseOrders && firebaseOrders.length > 0) {
           console.log('Loaded orders from Firebase:', firebaseOrders.length);
           setOrders(firebaseOrders);
@@ -44,7 +47,7 @@ function App() {
             // If we have localStorage orders but no Firebase orders, save them to Firebase
             savedOrders.forEach(async (order) => {
               try {
-                await FirebaseConfig.saveOrder(order);
+                await FirebaseService.createOrder(order);
               } catch (err) {
                 console.error('Error saving localStorage order to Firebase:', err);
               }
@@ -61,7 +64,7 @@ function App() {
     loadOrders();
     
     // Set up real-time listener for Firebase updates
-    const unsubscribe = FirebaseConfig.subscribeToOrders((updatedOrders) => {
+    const unsubscribe = FirebaseService.subscribeToOrders((updatedOrders) => {
       console.log('Received real-time order update from Firebase:', updatedOrders.length);
       setOrders(updatedOrders);
     });
@@ -83,7 +86,7 @@ function App() {
           for (const order of sampleOrders) {
             try {
               // Try to save directly to Firebase first
-              const newOrder = await FirebaseConfig.saveOrder(order);
+              const newOrder = await FirebaseService.createOrder(order);
               initialOrders.push(newOrder);
             } catch (error) {
               console.error('Error creating sample order:', error);
@@ -132,40 +135,49 @@ function App() {
   const handleNewOrder = async (orderData) => {
     console.log('Received new order:', orderData);
     try {
-      // Save order to Firebase for persistence
-      const firebaseOrder = await FirebaseConfig.saveOrder(orderData);
+      // Save order to Firebase for persistence using the new FirebaseService
+      console.log('Creating order through FirebaseService');
+      const firebaseOrder = await FirebaseService.createOrder(orderData);
       console.log('New order saved to Firebase:', firebaseOrder);
       
-      // Also save to localStorage as backup
-      const updatedOrders = [...orders, firebaseOrder];
-      LocalStorage.saveOrders(updatedOrders);
-      
+      // No need to save to localStorage since we're using Firebase as single source of truth
+      // Just update the state for immediate UI display until Firebase real-time update comes in
       setShowOrderForm(false);
       return firebaseOrder;
     } catch (error) {
-      console.error('Error creating new order:', error);
+      console.error('Error creating new order through FirebaseService:', error);
       
-      // Fallback to local storage only if Firebase fails
+      // Try direct Firestore access as a fallback
       try {
-        // Generate a local ID
-        const localOrder = {
+        console.log('Attempting to create order through direct Firestore access');
+        const { collection, addDoc } = await import('firebase/firestore');
+        
+        // Create a clean order object
+        const orderId = `order-${Date.now()}`;
+        const cleanOrder = {
           ...orderData,
-          id: `local-${Date.now()}`,
-          orderId: `LOCAL-${Date.now().toString().slice(-4)}`,
-          _isLocal: true,
-          createdAt: new Date().toISOString()
+          id: orderId,
+          orderId: orderId,
+          createdAt: orderData.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         };
         
-        // Update local state
-        const updatedOrders = [...orders, localOrder];
-        setOrders(updatedOrders);
-        LocalStorage.saveOrders(updatedOrders);
+        // Add to Firestore directly
+        const ordersCollection = collection(FirebaseService.db, 'orders');
+        const docRef = await addDoc(ordersCollection, cleanOrder);
+        console.log('Order created successfully via direct Firestore access, ID:', docRef.id);
         
-        console.log('Created local fallback order:', localOrder);
+        // Update the order with the new document ID
+        const savedOrder = {
+          ...cleanOrder,
+          id: docRef.id
+        };
+        
         setShowOrderForm(false);
-        return localOrder;
-      } catch (localError) {
-        console.error('Complete failure creating order:', localError);
+        return savedOrder;
+      } catch (directError) {
+        console.error('Complete failure creating order via all methods:', directError);
+        alert('Could not create order. Please check console for details.');
         return null;
       }
     }
@@ -302,13 +314,10 @@ function App() {
       };
       
       // Save to archived collection in Firebase
-      await FirebaseConfig.saveOrder({
-        ...archivedOrder,
-        collection: FirebaseConfig.ARCHIVED_ORDERS_COLLECTION
-      });
+      await FirebaseService.archiveOrder(orderId);
       
-      // Delete from active orders
-      await FirebaseConfig.deleteOrder(orderId);
+      // The archiveOrder function already handles the deletion of the original order
+      // so we don't need a separate deleteOrder call
       
       // Update local state
       const updatedOrders = orders.filter(o => o.id !== orderId && o.orderId !== orderId);
@@ -323,19 +332,6 @@ function App() {
     }
   };
 
-  return (
-    <Router>
-      <div className="flex h-screen bg-gray-100">
-        <Sidebar onNewOrder={() => setShowOrderForm(true)} />
-        
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4">
-            <Routes>
-              <Route 
-                path="/" 
-                element={
-                  <DashboardPage 
-                    orders={orders} 
                     isLoading={isLoading}
                     onStatusChange={handleStatusChange}
                     onPizzaStatusChange={handlePizzaStatusChange}
@@ -357,6 +353,8 @@ function App() {
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/orders" element={<OrdersPage orders={orders} />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/cleanup" element={<OrderCleanupUtility />} />
             </Routes>
           </main>
         </div>
@@ -374,13 +372,31 @@ function App() {
                 &times;
               </button>
             </div>
-            <CustomOrderForm 
-              onSubmit={handleNewOrder} 
-              onCancel={() => setShowOrderForm(false)} 
+            <FirebaseDirectForm onClose={() => setShowOrderForm(false)} />
+          </div>
+        </div>
+      )}
+      
+      {showTestForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Test Form</h2>
+              <button 
+                onClick={() => setShowTestForm(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                &times;
+              </button>
+            </div>
+            <HookOrderTest 
+              onClose={() => setShowTestForm(false)} 
             />
           </div>
         </div>
       )}
+    </Router>
+  );
     </Router>
   );
 }

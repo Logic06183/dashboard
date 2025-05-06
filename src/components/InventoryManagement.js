@@ -2,53 +2,65 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { MdAdd, MdRemove, MdWarning, MdTrendingUp, MdStackedBarChart } from 'react-icons/md';
 import { calculateInventoryUsage, getUsageByCategory, getMostUsedIngredients, getInventoryEstimate, PIZZA_INGREDIENTS } from '../services/InventoryService';
 import { sampleOrders } from '../sampleOrders';
+import { getInventory, updateInventory, subscribeToInventory } from '../services/FirebaseService';
+import useFirebaseOrders from '../hooks/useFirebaseOrders';
 
-const InventoryManagement = ({ orders = [] }) => {
+const InventoryManagement = () => {
+  // Get orders directly from Firebase
+  const { data: orders = [], loading: ordersLoading } = useFirebaseOrders();
+  
   // State for current inventory levels  
-  const [inventory, setInventory] = useState(() => {
-    const savedInventory = localStorage.getItem('pizza_inventory');
-    return savedInventory ? JSON.parse(savedInventory) : {
-      sourdough_dough: { amount: 100, unit: 'balls', threshold: 20 },
-      tomato_sauce: { amount: 50, unit: 'liters', threshold: 10 },
-      mozzarella_cheese: { amount: 40, unit: 'kg', threshold: 8 },
-      pepperoni: { amount: 30, unit: 'kg', threshold: 5 },
-      mushrooms: { amount: 25, unit: 'kg', threshold: 5 },
-      bacon: { amount: 15, unit: 'kg', threshold: 3 },
-      goats_cheese: { amount: 10, unit: 'kg', threshold: 2 },
-      caramelised_onions: { amount: 8, unit: 'kg', threshold: 2 }, 
-      fresh_basil: { amount: 5, unit: 'kg', threshold: 1 },
-      olives: { amount: 7, unit: 'kg', threshold: 2 }
-    };
-  });
+  const [inventory, setInventory] = useState({});
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [inventoryError, setInventoryError] = useState(null);
   
   // Track which view is active
   const [activeView, setActiveView] = useState('current'); // 'current', 'usage', 'forecast'
 
-  // Save inventory to localStorage when it changes
+  // Load inventory from Firebase on component mount and subscribe to real-time updates
   useEffect(() => {
-    localStorage.setItem('pizza_inventory', JSON.stringify(inventory));
-  }, [inventory]);
+    setInventoryLoading(true);
+    
+    // First load the initial inventory data
+    getInventory()
+      .then(inventoryData => {
+        setInventory(inventoryData);
+        setInventoryLoading(false);
+      })
+      .catch(error => {
+        console.error('Error loading inventory:', error);
+        setInventoryError(error.message);
+        setInventoryLoading(false);
+      });
+      
+    // Then subscribe to real-time updates
+    const unsubscribe = subscribeToInventory(inventoryData => {
+      setInventory(inventoryData);
+      setInventoryLoading(false);
+    });
+    
+    // Clean up subscription on unmount
+    return () => unsubscribe();
+  }, []);
+  
+  // Save inventory changes to Firebase
+  const saveInventoryToFirebase = async (newInventory) => {
+    try {
+      console.log('Saving inventory to Firebase:', newInventory);
+      await updateInventory(newInventory);
+      // No need to update local state - Firebase real-time updates will handle it
+    } catch (error) {
+      console.error('Error saving inventory to Firebase:', error);
+      setInventoryError('Failed to save inventory. Please try again.');
+    }
+  };
   
   // Force a re-calculation with all available orders
   useEffect(() => {
     console.log('In InventoryManagement: received', orders?.length || 0, 'orders');
   }, [orders]);
   
-  // Listen for order updates and force re-render when orders change
-  useEffect(() => {
-    const handleOrderUpdated = () => {
-      // Force a re-render when orders change
-      setActiveView(prev => prev); // Simple state update to force re-render
-    };
-    
-    window.addEventListener('order-updated', handleOrderUpdated);
-    window.addEventListener('force-render', handleOrderUpdated);
-    
-    return () => {
-      window.removeEventListener('order-updated', handleOrderUpdated);
-      window.removeEventListener('force-render', handleOrderUpdated);
-    };
-  }, []);
+  // No need for custom event listeners - Firebase real-time updates handle this
   
   // Generate fallback data if no real data can be processed
   const generateFallbackData = () => {
@@ -151,20 +163,67 @@ const InventoryManagement = ({ orders = [] }) => {
     }
   }, [orders]);
 
-  const updateInventory = (item, change) => {
-    setInventory(prev => ({
-      ...prev,
-      [item]: {
-        ...prev[item],
-        amount: Math.max(0, prev[item].amount + change)
+  // Increment inventory item amount - now saves to Firebase
+  const handleIncrement = (ingredient, amount = 1) => {
+    const newInventory = {
+      ...inventory,
+      [ingredient]: {
+        ...inventory[ingredient],
+        amount: (inventory[ingredient]?.amount || 0) + amount
       }
-    }));
+    };
+    
+    // Save to Firebase
+    saveInventoryToFirebase(newInventory);
+  };
+
+  // Decrement inventory item amount - now saves to Firebase
+  const handleDecrement = (ingredient, amount = 1) => {
+    const currentAmount = inventory[ingredient]?.amount || 0;
+    const newAmount = Math.max(0, currentAmount - amount);
+    
+    const newInventory = {
+      ...inventory,
+      [ingredient]: {
+        ...inventory[ingredient],
+        amount: newAmount
+      }
+    };
+    
+    // Save to Firebase
+    saveInventoryToFirebase(newInventory);
   };
 
   const isLowStock = (item) => {
     return inventory[item].amount <= inventory[item].threshold;
   };
 
+  // Loading state for inventory
+  if (inventoryLoading) {
+    return (
+      <div className="p-6">
+        <h2 className="text-2xl font-semibold mb-6">Ingredient Inventory Management</h2>
+        <div className="flex items-center justify-center py-6 bg-white rounded-lg shadow p-4">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading inventory data...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  // Error state
+  if (inventoryError) {
+    return (
+      <div className="p-6">
+        <h2 className="text-2xl font-semibold mb-6">Ingredient Inventory Management</h2>
+        <div className="text-red-500 p-4 border border-red-200 rounded bg-red-50">
+          <p><strong>Error:</strong> {inventoryError}</p>
+          <p className="mt-2">Please try refreshing the page.</p>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="p-6">
       <h2 className="text-2xl font-semibold mb-6">Ingredient Inventory Management</h2>
