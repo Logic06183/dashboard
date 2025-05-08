@@ -1,17 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import FirebaseService from '../../services/FirebaseService';
 
-const OrdersPage = ({ orders }) => {
+const { updateOrder, subscribeToOrders } = FirebaseService;
+
+const OrdersPage = () => {
+  const [orders, setOrders] = useState([]);
   const [showCompleted, setShowCompleted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   
   // No pizza change functionality in this version
   
-  // Update current time every 30 seconds
+  // Subscribe to orders
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 30000);
-    return () => clearInterval(timer);
+    const unsubscribe = subscribeToOrders((updatedOrders) => {
+      setOrders(updatedOrders || []);
+      setCurrentTime(new Date()); // Only update time when orders change
+    });
+
+    return () => {
+      unsubscribe(); // Cleanup Firebase subscription
+    };
   }, []);
   
   // Check if an order is completed (all pizzas cooked)
@@ -81,7 +89,7 @@ const OrdersPage = ({ orders }) => {
     
     try {
       const dueDate = new Date(dueTime);
-      const now = new Date();
+      const now = currentTime;
       const minutesDiff = Math.floor((dueDate - now) / 60000);
       
       if (minutesDiff < 0) {
@@ -165,9 +173,18 @@ const OrdersPage = ({ orders }) => {
           </h3>
           <div className="grid gap-4">
             {groupedOrders.late.map(order => (
-              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-red-600">
+              <div key={order.id || order.orderId} className="bg-white p-4 rounded-lg shadow-sm">
+                <p className="text-lg font-medium text-purple-600 mb-1">
+                  {order.customerName || 'Anonymous Customer'}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-semibold">{order.customer}</h4>
+                  <div>
+                    <h4 className="font-semibold">{order.customer}</h4>
+                    <p className="text-sm font-medium text-gray-800">
+                      Via: {order.platform || 'Window'}
+                    </p>
+                  </div>
                   <span className="text-red-600 font-medium">Late</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
@@ -195,10 +212,37 @@ const OrdersPage = ({ orders }) => {
                 {order.pizzas && (
                   <div className="mt-2">
                     {order.pizzas.map((pizza, i) => (
-                      <div key={i} className="text-sm py-1 border-b border-gray-100">
-                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                      <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={order.cooked?.[i] || false}
+                            onChange={async (e) => {
+                              try {
+                                const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
+                                cookedArray[i] = e.target.checked;
+                                const allCooked = cookedArray.every(status => status);
+                                
+                                await updateOrder(order.id || order.orderId, {
+                                  cooked: cookedArray,
+                                  status: allCooked ? 'completed' : 'pending',
+                                  completed: allCooked
+                                });
+                              } catch (error) {
+                                console.error('Error updating pizza status:', error);
+                              }
+                            }}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className={order.cooked?.[i] ? 'line-through text-gray-400' : ''}>
+                            {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                          </span>
+                        </div>
+                        {pizza.specialInstructions && (
+                          <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
+                        )}
                         {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
-                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                          <span className="text-green-600 font-medium text-xs">COOKED</span>
                         )}
                       </div>
                     ))}
@@ -219,13 +263,21 @@ const OrdersPage = ({ orders }) => {
           </h3>
           <div className="grid gap-4">
             {groupedOrders.urgent.map(order => (
-              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-orange-600">
+              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-orange-500">
+                <p className="text-lg font-medium text-purple-600 mb-1">
+                  {order.customerName || 'Anonymous Customer'}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-semibold">{order.customer}</h4>
+                  <div>
+                    <h4 className="font-semibold">{order.customer}</h4>
+                    <p className="text-sm font-medium text-gray-800">
+                      Via: {order.platform || 'Window'}
+                    </p>
+                  </div>
                   <span className="text-orange-600 font-medium">Urgent</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
-                  <p>Order #{order.id || order.orderId}</p>
                   <div className="flex items-center gap-2">
                     {order.orderTime && (
                       <span>Ordered: {formatSATime(order.orderTime)}</span>
@@ -249,10 +301,37 @@ const OrdersPage = ({ orders }) => {
                 {order.pizzas && (
                   <div className="mt-2">
                     {order.pizzas.map((pizza, i) => (
-                      <div key={i} className="text-sm py-1 border-b border-gray-100">
-                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                      <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={order.cooked?.[i] || false}
+                            onChange={async (e) => {
+                              try {
+                                const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
+                                cookedArray[i] = e.target.checked;
+                                const allCooked = cookedArray.every(status => status);
+                                
+                                await updateOrder(order.id || order.orderId, {
+                                  cooked: cookedArray,
+                                  status: allCooked ? 'completed' : 'pending',
+                                  completed: allCooked
+                                });
+                              } catch (error) {
+                                console.error('Error updating pizza status:', error);
+                              }
+                            }}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className={order.cooked?.[i] ? 'line-through text-gray-400' : ''}>
+                            {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                          </span>
+                        </div>
+                        {pizza.specialInstructions && (
+                          <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
+                        )}
                         {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
-                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                          <span className="text-green-600 font-medium text-xs">COOKED</span>
                         )}
                       </div>
                     ))}
@@ -274,8 +353,17 @@ const OrdersPage = ({ orders }) => {
           <div className="grid gap-4">
             {groupedOrders.normal.map(order => (
               <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-blue-600">
+                <p className="text-lg font-medium text-purple-600 mb-1">
+                  {order.customerName || 'Anonymous Customer'}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-semibold">{order.customer}</h4>
+                  <div>
+                    <h4 className="font-semibold">{order.customer}</h4>
+                    <p className="text-sm font-medium text-gray-800">
+                      Via: {order.platform || 'Window'}
+                    </p>
+                  </div>
                   <span className="text-blue-600 font-medium">Normal</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
@@ -303,10 +391,37 @@ const OrdersPage = ({ orders }) => {
                 {order.pizzas && (
                   <div className="mt-2">
                     {order.pizzas.map((pizza, i) => (
-                      <div key={i} className="text-sm py-1 border-b border-gray-100">
-                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                      <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={order.cooked?.[i] || false}
+                            onChange={async (e) => {
+                              try {
+                                const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
+                                cookedArray[i] = e.target.checked;
+                                const allCooked = cookedArray.every(status => status);
+                                
+                                await updateOrder(order.id || order.orderId, {
+                                  cooked: cookedArray,
+                                  status: allCooked ? 'completed' : 'pending',
+                                  completed: allCooked
+                                });
+                              } catch (error) {
+                                console.error('Error updating pizza status:', error);
+                              }
+                            }}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className={order.cooked?.[i] ? 'line-through text-gray-400' : ''}>
+                            {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                          </span>
+                        </div>
+                        {pizza.specialInstructions && (
+                          <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
+                        )}
                         {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
-                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                          <span className="text-green-600 font-medium text-xs">COOKED</span>
                         )}
                       </div>
                     ))}
@@ -328,8 +443,17 @@ const OrdersPage = ({ orders }) => {
           <div className="grid gap-4">
             {groupedOrders.completed.map(order => (
               <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-green-600">
+                <p className="text-lg font-medium text-purple-600 mb-1">
+                  {order.customerName || 'Anonymous Customer'}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
                 <div className="flex justify-between items-center">
-                  <h4 className="font-semibold">{order.customer}</h4>
+                  <div>
+                    <h4 className="font-semibold">{order.customer}</h4>
+                    <p className="text-sm font-medium text-gray-800">
+                      Via: {order.platform || 'Window'}
+                    </p>
+                  </div>
                   <span className="text-green-600 font-medium">Completed</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
@@ -357,10 +481,37 @@ const OrdersPage = ({ orders }) => {
                 {order.pizzas && (
                   <div className="mt-2">
                     {order.pizzas.map((pizza, i) => (
-                      <div key={i} className="text-sm py-1 border-b border-gray-100">
-                        {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                      <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={order.cooked?.[i] || false}
+                            onChange={async (e) => {
+                              try {
+                                const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
+                                cookedArray[i] = e.target.checked;
+                                const allCooked = cookedArray.every(status => status);
+                                
+                                await updateOrder(order.id || order.orderId, {
+                                  cooked: cookedArray,
+                                  status: allCooked ? 'completed' : 'pending',
+                                  completed: allCooked
+                                });
+                              } catch (error) {
+                                console.error('Error updating pizza status:', error);
+                              }
+                            }}
+                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                          />
+                          <span className={order.cooked?.[i] ? 'line-through text-gray-400' : ''}>
+                            {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                          </span>
+                        </div>
+                        {pizza.specialInstructions && (
+                          <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
+                        )}
                         {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
-                          <span className="ml-2 text-green-600 font-medium text-xs">COOKED</span>
+                          <span className="text-green-600 font-medium text-xs">COOKED</span>
                         )}
                       </div>
                     ))}

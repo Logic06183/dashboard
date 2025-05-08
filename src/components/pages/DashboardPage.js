@@ -1,24 +1,40 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import StatsCard from '../StatsCard';
-import CustomerTracking from '../CustomerTracking';
 import { motion } from 'framer-motion';
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
+import FirebaseService from '../../services/FirebaseService';
+import { 
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend 
+} from 'recharts';
+import { format } from 'date-fns';
 
-const DashboardPage = ({ orders = [], setOrders, onStatusChange, clearAllOrders }) => {
-  const [showCompleted, setShowCompleted] = useState(true); // DEFAULT TO TRUE to show completed orders
+const DashboardPage = () => {
+  const [orders, setOrders] = useState([]);
+
+  useEffect(() => {
+    const unsubscribe = FirebaseService.subscribeToOrders((updatedOrders) => {
+      setOrders(updatedOrders || []);
+    });
+
+    return () => unsubscribe();
+  }, []);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [sortedOrders, setSortedOrders] = useState([]);
   const [analytics, setAnalytics] = useState({
     hourlyOrders: [],
-    popularToppings: {},
-    averageOrderTime: 0,
+    popularPizzas: [],
+    deliveryPlatforms: [],
+    preparationTimes: [],
     dailyStats: {
       totalOrders: 0,
       totalSales: 0,
-      pendingOrders: 0,
       avgOrderValue: 0,
-      avgCompletionTime: 0,
-      orderChange: 0
-    }
+      avgPrepTime: 0,
+      orderChange: 0,
+      totalCustomers: 0
+    },
+    busyHours: [],
+    revenueByPlatform: []
   });
 
   // Calculate average completion time for orders
@@ -64,6 +80,72 @@ const DashboardPage = ({ orders = [], setOrders, onStatusChange, clearAllOrders 
       ? ((todayOrders.length - yesterdayOrders.length) / yesterdayOrders.length * 100).toFixed(1)
       : 100;
 
+    // Calculate popular pizzas
+    const pizzaCount = {};
+    orders.forEach(order => {
+      if (!order.pizzas || !Array.isArray(order.pizzas)) return;
+      order.pizzas.forEach(pizza => {
+        if (!pizza.pizzaType) return;
+        pizzaCount[pizza.pizzaType] = (pizzaCount[pizza.pizzaType] || 0) + (pizza.quantity || 1);
+      });
+    });
+    const popularPizzas = Object.entries(pizzaCount)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // Calculate average preparation times by hour
+    const prepTimesByHour = {};
+    const orderCountByHour = {};
+    
+    orders.forEach(order => {
+      if (!order.orderTime || !order.completionTime) return;
+      const orderTime = new Date(order.orderTime);
+      const completionTime = new Date(order.completionTime);
+      const prepTimeMinutes = Math.round((completionTime - orderTime) / (1000 * 60));
+      
+      // Skip invalid prep times
+      if (prepTimeMinutes < 0 || prepTimeMinutes > 180) return;
+      
+      const hour = format(orderTime, 'HH:00');
+      prepTimesByHour[hour] = (prepTimesByHour[hour] || 0) + prepTimeMinutes;
+      orderCountByHour[hour] = (orderCountByHour[hour] || 0) + 1;
+    });
+    
+    // Calculate hourly averages and sort by time
+    const preparationTimes = Object.entries(prepTimesByHour)
+      .map(([hour, totalTime]) => ({
+        time: hour,
+        avgTime: Math.round(totalTime / orderCountByHour[hour])
+      }))
+      .sort((a, b) => a.time.localeCompare(b.time));
+
+    // Calculate peak hours
+    const hourlyOrderCount = {};
+    orders.forEach(order => {
+      if (!order.orderTime) return;
+      const orderHour = new Date(order.orderTime).getHours();
+      hourlyOrderCount[orderHour] = (hourlyOrderCount[orderHour] || 0) + 1;
+    });
+
+    const busyHours = Object.entries(hourlyOrderCount)
+      .map(([hour, count]) => ({
+        hour: `${hour.padStart(2, '0')}:00`,
+        orders: count
+      }))
+      .sort((a, b) => b.orders - a.orders)
+      .slice(0, 3); // Top 3 busiest hours
+
+    // Calculate orders by platform
+    const platformOrders = {};
+    orders.forEach(order => {
+      if (!order.platform) return;
+      platformOrders[order.platform] = (platformOrders[order.platform] || 0) + 1;
+    });
+    const deliveryPlatforms = Object.entries(platformOrders)
+      .map(([platform, orders]) => ({ platform, orders }))
+      .sort((a, b) => b.orders - a.orders);
+
     // Calculate total sales
     const calculateOrderTotal = (order) => {
       try {
@@ -98,7 +180,11 @@ const DashboardPage = ({ orders = [], setOrders, onStatusChange, clearAllOrders 
     
     setAnalytics(prev => ({
       ...prev,
-      dailyStats
+      dailyStats,
+      popularPizzas,
+      deliveryPlatforms,
+      preparationTimes,
+      busyHours
     }));
   }, [orders]);
 
@@ -179,36 +265,53 @@ const DashboardPage = ({ orders = [], setOrders, onStatusChange, clearAllOrders 
     return colors[status] || colors.normal;
   };
 
-  // Define handleStatusChange to handle checkbox updates and pass to parent
-  const handleStatusChange = (orderId, newStatus) => {
-    if (!orderId || !newStatus) return;
-    
-    console.log('Status change in DashboardPage:', orderId, newStatus);
-    
-    // Use the onStatusChange prop from parent if available
-    if (typeof onStatusChange === 'function') {
-      onStatusChange(orderId, newStatus);
-      return;
-    }
-    
-    // Fallback local implementation if onStatusChange isn't provided
-    if (typeof setOrders === 'function') {
-      // Handle both string status and object status with cooked array
-      if (typeof newStatus === 'string') {
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
-      } else if (typeof newStatus === 'object') {
-        setOrders(prevOrders => 
-          prevOrders.map(order => 
-            order.id === orderId ? { ...order, ...newStatus } : order
-          )
-        );
+  // Define handleStatusChange to handle checkbox updates
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      // Get the order
+      const order = orders.find(o => o.id === orderId);
+      if (!order) {
+        console.error(`Order ${orderId} not found`);
+        return;
       }
-    } else {
-      console.warn('Neither onStatusChange nor setOrders is available in DashboardPage');
+
+      // Handle both string status and object status with cooked array
+      const updateData = typeof newStatus === 'string'
+        ? { status: newStatus }
+        : { cooked: newStatus.cooked };
+
+      // Update the order in Firebase
+      await FirebaseService.updateOrder(orderId, updateData);
+      
+      // Update local state
+      setOrders(prevOrders => 
+        prevOrders.map(order => 
+          order.id === orderId
+            ? { ...order, ...updateData }
+            : order
+        )
+      );
+
+      // Dispatch custom event for order status update
+      const event = new CustomEvent('order-status-updated', {
+        detail: { orderId, newStatus: updateData }
+      });
+      window.dispatchEvent(event);
+
+      console.log(`Order ${orderId} updated:`, updateData);
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
+
+  // Clear all orders function
+  const clearAllOrders = async () => {
+    try {
+      await FirebaseService.clearAllOrders();
+      setOrders([]);
+      console.log('All orders have been cleared');
+    } catch (error) {
+      console.error('Error clearing orders:', error);
     }
   };
 
@@ -255,35 +358,138 @@ const DashboardPage = ({ orders = [], setOrders, onStatusChange, clearAllOrders 
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Key Performance Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatsCard
-            title="Total Orders"
-            value={analytics.dailyStats.totalOrders}
-            change={analytics.dailyStats.orderChange + '%'}
-          />
-          <StatsCard
-            title="Total Sales"
+            title="John's Daily Sales"
             value={'R' + analytics.dailyStats.totalSales.toFixed(2)}
-            change="+10%"
+            change={analytics.dailyStats.orderChange + '%'}
+            trend="up"
           />
           <StatsCard
-            title="Average Order Value"
-            value={'R' + analytics.dailyStats.avgOrderValue}
-            change="+5%"
+            title="Pizza Orders"
+            value={analytics.dailyStats.totalOrders}
+            change={`${((analytics.dailyStats.totalOrders / 100) * 100).toFixed(1)}%`}
+            trend="up"
           />
           <StatsCard
-            title="Pending Orders"
-            value={analytics.dailyStats.pendingOrders}
-            change="-2%"
+            title="Most Popular Pizza"
+            value={analytics.dailyStats.mostPopularPizza || 'The Champ'}
+            change={analytics.dailyStats.popularityChange || '+12%'}
+            trend="up"
+          />
+          <StatsCard
+            title="Kitchen Status"
+            value={`${analytics.dailyStats.avgPrepTime} min`}
+            change={analytics.dailyStats.avgPrepTime > 30 ? 'Busy' : 'On Track'}
+            trend={analytics.dailyStats.avgPrepTime > 30 ? 'down' : 'up'}
           />
         </div>
 
-        {/* Active Orders Section removed */}
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {/* Hourly Orders Chart */}
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold mb-4">Orders by Hour</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.hourlyOrders}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="hour" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="orders" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
 
-        {/* Customer Tracking Section */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-4">Customer Orders</h2>
-          <CustomerTracking orders={orders} />
+          {/* Popular Pizzas Chart */}
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold mb-4">Most Popular Pizzas</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={analytics.popularPizzas}
+                    dataKey="count"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={100}
+                    fill="#8884d8"
+                    label
+                  >
+                    {analytics.popularPizzas.map((entry, index) => (
+                      <Cell key={index} fill={['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c'][index % 5]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Delivery Platforms Chart */}
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold mb-4">Orders by Platform</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={analytics.deliveryPlatforms}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="platform" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar dataKey="orders" fill="#82ca9d" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Preparation Times Chart */}
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold mb-4">Average Preparation Times</h3>
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.preparationTimes}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="time" />
+                  <YAxis />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="avgTime" stroke="#8884d8" />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Business Insights */}
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h3 className="text-lg font-semibold mb-4">Business Insights</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <h4 className="font-medium text-purple-800">Peak Hours</h4>
+              <p className="text-sm text-purple-600 mt-2">
+                Busiest time: {analytics.busyHours[0]?.hour || 'N/A'}<br />
+                Orders: {analytics.busyHours[0]?.orders || 0}
+              </p>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <h4 className="font-medium text-green-800">Best Platform</h4>
+              <p className="text-sm text-green-600 mt-2">
+                Platform: {analytics.revenueByPlatform[0]?.platform || 'N/A'}<br />
+                Revenue: R{analytics.revenueByPlatform[0]?.revenue?.toFixed(2) || '0.00'}
+              </p>
+            </div>
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-800">Customer Base</h4>
+              <p className="text-sm text-blue-600 mt-2">
+                Total Customers: {analytics.dailyStats.totalCustomers}<br />
+                Avg Order Value: R{analytics.dailyStats.avgOrderValue}
+              </p>
+            </div>
+          </div>
         </div>
       </main>
     </div>
