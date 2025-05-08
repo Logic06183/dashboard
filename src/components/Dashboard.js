@@ -214,11 +214,6 @@ const Dashboard = () => {
             </div>
           </header>
 
-          <StatsCard 
-            title="Some Title"
-            value="123"
-            change="+10%"
-          />
 
           {showOrderForm && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" style={{position: 'fixed', zIndex: 9999}}>
