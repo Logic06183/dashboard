@@ -193,7 +193,7 @@ const OrdersPage = () => {
                     {order.orderTime && (
                       <span>Ordered: {formatSATime(order.orderTime)}</span>
                     )}
-                    {order.dueTime && (
+                    {!isOrderCompleted(order) && order.dueTime && (
                       <span className="font-medium">Due: 
                         <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
                           {formatSATime(order.dueTime)}
@@ -225,7 +225,7 @@ const OrdersPage = () => {
                                 
                                 await updateOrder(order.id || order.orderId, {
                                   cooked: cookedArray,
-                                  status: allCooked ? 'completed' : 'pending',
+                                  status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
                               } catch (error) {
@@ -282,7 +282,7 @@ const OrdersPage = () => {
                     {order.orderTime && (
                       <span>Ordered: {formatSATime(order.orderTime)}</span>
                     )}
-                    {order.dueTime && (
+                    {!isOrderCompleted(order) && order.dueTime && (
                       <span className="font-medium">Due: 
                         <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
                           {formatSATime(order.dueTime)}
@@ -314,7 +314,7 @@ const OrdersPage = () => {
                                 
                                 await updateOrder(order.id || order.orderId, {
                                   cooked: cookedArray,
-                                  status: allCooked ? 'completed' : 'pending',
+                                  status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
                               } catch (error) {
@@ -372,7 +372,7 @@ const OrdersPage = () => {
                     {order.orderTime && (
                       <span>Ordered: {formatSATime(order.orderTime)}</span>
                     )}
-                    {order.dueTime && (
+                    {!isOrderCompleted(order) && order.dueTime && (
                       <span className="font-medium">Due: 
                         <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
                           {formatSATime(order.dueTime)}
@@ -404,7 +404,7 @@ const OrdersPage = () => {
                                 
                                 await updateOrder(order.id || order.orderId, {
                                   cooked: cookedArray,
-                                  status: allCooked ? 'completed' : 'pending',
+                                  status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
                               } catch (error) {
@@ -462,7 +462,7 @@ const OrdersPage = () => {
                     {order.orderTime && (
                       <span>Ordered: {formatSATime(order.orderTime)}</span>
                     )}
-                    {order.dueTime && (
+                    {!isOrderCompleted(order) && order.dueTime && (
                       <span className="font-medium">Due: 
                         <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
                           {formatSATime(order.dueTime)}
@@ -494,7 +494,7 @@ const OrdersPage = () => {
                                 
                                 await updateOrder(order.id || order.orderId, {
                                   cooked: cookedArray,
-                                  status: allCooked ? 'completed' : 'pending',
+                                  status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
                               } catch (error) {
