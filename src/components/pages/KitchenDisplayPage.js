@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TableKitchenDisplay from '../TableKitchenDisplay';
 
-const KitchenDisplayPage = ({ orders, onStatusChange }) => {
+const KitchenDisplayPage = ({ isLoading, onStatusChange, onPizzaStatusChange, onArchiveOrder }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   
   // DISABLED: No automatic time updates to prevent auto-refreshes
@@ -19,8 +19,8 @@ const KitchenDisplayPage = ({ orders, onStatusChange }) => {
           <h1 className="text-2xl font-bold text-primary">John Dough's Kitchen Display</h1>
           <div className="flex items-center space-x-4">
             <div className="bg-secondary-light px-4 py-2 rounded-lg">
-              <span className="text-primary font-medium">Active Orders: </span>
-              <span className="text-yellow-500 font-bold">{orders.filter(o => !['delivered'].includes(o.status)).length}</span>
+              <span className="text-primary font-medium">Kitchen Display </span>
+              <span className="text-yellow-500 font-bold">Active</span>
             </div>
             <div className="bg-secondary-light px-4 py-2 rounded-lg">
               <span className="text-primary font-medium">Time: </span>
@@ -33,7 +33,11 @@ const KitchenDisplayPage = ({ orders, onStatusChange }) => {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <TableKitchenDisplay orders={orders} onStatusChange={onStatusChange} />
+        <TableKitchenDisplay 
+          onStatusChange={onStatusChange}
+          onPizzaStatusChange={onPizzaStatusChange}
+          onArchiveOrder={onArchiveOrder}
+        />
       </main>
     </div>
   );

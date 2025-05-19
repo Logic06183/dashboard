@@ -7,6 +7,46 @@ const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [showCompleted, setShowCompleted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [highlightedOrders, setHighlightedOrders] = useState({});
+  
+  // Load highlighted orders from localStorage on component mount
+  useEffect(() => {
+    const savedHighlights = localStorage.getItem('highlightedOrders');
+    if (savedHighlights) {
+      try {
+        setHighlightedOrders(JSON.parse(savedHighlights));
+      } catch (err) {
+        console.error('Error parsing highlighted orders from localStorage:', err);
+      }
+    }
+  }, []);
+  
+  // Save highlighted orders to localStorage when they change
+  useEffect(() => {
+    localStorage.setItem('highlightedOrders', JSON.stringify(highlightedOrders));
+  }, [highlightedOrders]);
+  
+  // Toggle order highlight
+  const toggleOrderHighlight = (orderId) => {
+    const newHighlightedOrders = { ...highlightedOrders };
+    
+    if (newHighlightedOrders[orderId]) {
+      // If already highlighted, remove highlight
+      delete newHighlightedOrders[orderId];
+    } else {
+      // If not highlighted, add highlight with timestamp
+      newHighlightedOrders[orderId] = {
+        timestamp: new Date().getTime()
+      };
+    }
+    
+    setHighlightedOrders(newHighlightedOrders);
+  };
+  
+  // Check if an order is highlighted
+  const isOrderHighlighted = (orderId) => {
+    return !!highlightedOrders[orderId];
+  };
   
   // No pizza change functionality in this version
   
@@ -57,10 +97,21 @@ const OrdersPage = () => {
       if (aCompleted && !bCompleted) return 1; // Move completed to bottom
       if (!aCompleted && bCompleted) return -1; // Move pending to top
       
-      // Then sort by due time
+      // Get timestamps for comparison
       const timeA = a.dueTime ? new Date(a.dueTime) : new Date(a.orderTime);
       const timeB = b.dueTime ? new Date(b.dueTime) : new Date(b.orderTime);
-      return timeA - timeB;
+      
+      // Different sorting for completed vs pending orders
+      if (aCompleted && bCompleted) {
+        // For completed orders, sort by most recent first (descending)
+        // Use completionTime if available, otherwise use orderTime
+        const completionTimeA = a.completionTime ? new Date(a.completionTime) : timeA;
+        const completionTimeB = b.completionTime ? new Date(b.completionTime) : timeB;
+        return completionTimeB - completionTimeA; // Descending order (newest first)
+      } else {
+        // For pending orders, keep sorting by due time (ascending)
+        return timeA - timeB; // Ascending order (oldest/most urgent first)
+      }
     });
   }, [orders, showCompleted, currentTime]);
 
@@ -146,23 +197,69 @@ const OrdersPage = () => {
 
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold">Kitchen Display System</h2>
-        <div className="flex items-center space-x-4">
+      <div className="mb-4 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">Orders</h1>
+        <div className="flex items-center">
           <label className="inline-flex items-center cursor-pointer">
             <input 
               type="checkbox" 
-              checked={showCompleted} 
-              onChange={() => setShowCompleted(!showCompleted)}
               className="sr-only peer"
+              checked={showCompleted}
+              onChange={() => setShowCompleted(!showCompleted)}
             />
-            <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
             <span className="ml-3 text-sm font-medium text-gray-700">
               Show Completed Orders
             </span>
           </label>
         </div>
       </div>
+      
+      {/* Highlighted Orders Section */}
+      {Object.keys(highlightedOrders).length > 0 && (
+        <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg shadow-md">
+          <div className="flex items-center mb-3">
+            <h2 className="text-lg font-bold text-yellow-800">Highlighted Orders ({Object.keys(highlightedOrders).length})</h2>
+            <p className="ml-2 text-sm text-yellow-700">Click on an order again to remove highlighting</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {Object.keys(highlightedOrders).map(orderId => {
+              // Find the order in all groups
+              const order = [...groupedOrders.late, ...groupedOrders.urgent, ...groupedOrders.normal, ...groupedOrders.completed]
+                .find(o => (o.id === orderId || o.orderId === orderId));
+              
+              if (!order) return null;
+              
+              return (
+                <div 
+                  key={orderId} 
+                  onClick={() => toggleOrderHighlight(orderId)}
+                  className="bg-white p-3 rounded-md border-l-4 border-yellow-400 shadow-sm cursor-pointer"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <div className="flex items-center">
+                        <span className="font-bold text-yellow-800">{order.customerName || 'Anonymous Customer'}</span>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">Due: {formatSATime(order.dueTime || order.orderTime)}</div>
+                      <div className="text-xs text-gray-500">Platform: {order.platform || 'Window'}</div>
+                      <div className="mt-2">
+                        {order.pizzas?.map((pizza, idx) => (
+                          <div key={idx} className="text-sm">
+                            <span className={order.cooked?.[idx] ? 'line-through text-gray-400' : ''}>
+                              {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       
       {/* Late Orders - Highest Priority */}
       {groupedOrders.late.length > 0 && (
@@ -173,7 +270,13 @@ const OrdersPage = () => {
           </h3>
           <div className="grid gap-4">
             {groupedOrders.late.map(order => (
-              <div key={order.id || order.orderId} className="bg-white p-4 rounded-lg shadow-sm">
+              <div 
+                key={order.id || order.orderId} 
+                onClick={() => toggleOrderHighlight(order.id || order.orderId)}
+                className={`bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500 
+                  ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
+                  cursor-pointer transition-all duration-200`}
+              >
                 <p className="text-lg font-medium text-purple-600 mb-1">
                   {order.customerName || 'Anonymous Customer'}
                 </p>
@@ -217,6 +320,7 @@ const OrdersPage = () => {
                           <input
                             type="checkbox"
                             checked={order.cooked?.[i] || false}
+                            onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
                             onChange={async (e) => {
                               try {
                                 const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
@@ -228,6 +332,11 @@ const OrdersPage = () => {
                                   status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
+                                
+                                // If all pizzas are cooked, remove the order from highlighted orders
+                                if (allCooked && isOrderHighlighted(order.id || order.orderId)) {
+                                  toggleOrderHighlight(order.id || order.orderId);
+                                }
                               } catch (error) {
                                 console.error('Error updating pizza status:', error);
                               }
@@ -263,7 +372,13 @@ const OrdersPage = () => {
           </h3>
           <div className="grid gap-4">
             {groupedOrders.urgent.map(order => (
-              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-orange-500">
+              <div 
+                key={order.id || order.orderId} 
+                onClick={() => toggleOrderHighlight(order.id || order.orderId)}
+                className={`bg-white shadow rounded-lg p-4 border-l-4 border-orange-500 
+                  ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
+                  cursor-pointer transition-all duration-200`}
+              >
                 <p className="text-lg font-medium text-purple-600 mb-1">
                   {order.customerName || 'Anonymous Customer'}
                 </p>
@@ -306,6 +421,7 @@ const OrdersPage = () => {
                           <input
                             type="checkbox"
                             checked={order.cooked?.[i] || false}
+                            onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
                             onChange={async (e) => {
                               try {
                                 const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
@@ -317,6 +433,11 @@ const OrdersPage = () => {
                                   status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
+                                
+                                // If all pizzas are cooked, remove the order from highlighted orders
+                                if (allCooked && isOrderHighlighted(order.id || order.orderId)) {
+                                  toggleOrderHighlight(order.id || order.orderId);
+                                }
                               } catch (error) {
                                 console.error('Error updating pizza status:', error);
                               }
@@ -352,7 +473,13 @@ const OrdersPage = () => {
           </h3>
           <div className="grid gap-4">
             {groupedOrders.normal.map(order => (
-              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-blue-600">
+              <div 
+                key={order.id || order.orderId} 
+                onClick={() => toggleOrderHighlight(order.id || order.orderId)}
+                className={`bg-white shadow rounded-lg p-4 border-l-4 border-blue-600 
+                  ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
+                  cursor-pointer transition-all duration-200`}
+              >
                 <p className="text-lg font-medium text-purple-600 mb-1">
                   {order.customerName || 'Anonymous Customer'}
                 </p>
@@ -396,6 +523,7 @@ const OrdersPage = () => {
                           <input
                             type="checkbox"
                             checked={order.cooked?.[i] || false}
+                            onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
                             onChange={async (e) => {
                               try {
                                 const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
@@ -407,6 +535,11 @@ const OrdersPage = () => {
                                   status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
+                                
+                                // If all pizzas are cooked, remove the order from highlighted orders
+                                if (allCooked && isOrderHighlighted(order.id || order.orderId)) {
+                                  toggleOrderHighlight(order.id || order.orderId);
+                                }
                               } catch (error) {
                                 console.error('Error updating pizza status:', error);
                               }
@@ -442,7 +575,13 @@ const OrdersPage = () => {
           </h3>
           <div className="grid gap-4">
             {groupedOrders.completed.map(order => (
-              <div key={order.id || order.orderId} className="bg-white shadow rounded-lg p-4 border-l-4 border-green-600">
+              <div 
+                key={order.id || order.orderId} 
+                onClick={() => toggleOrderHighlight(order.id || order.orderId)}
+                className={`bg-white shadow rounded-lg p-4 border-l-4 border-green-600 
+                  ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
+                  cursor-pointer transition-all duration-200`}
+              >
                 <p className="text-lg font-medium text-purple-600 mb-1">
                   {order.customerName || 'Anonymous Customer'}
                 </p>
@@ -486,6 +625,7 @@ const OrdersPage = () => {
                           <input
                             type="checkbox"
                             checked={order.cooked?.[i] || false}
+                            onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
                             onChange={async (e) => {
                               try {
                                 const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
@@ -497,6 +637,11 @@ const OrdersPage = () => {
                                   status: allCooked ? 'done' : 'pending',
                                   completed: allCooked
                                 });
+                                
+                                // If all pizzas are cooked, remove the order from highlighted orders
+                                if (allCooked && isOrderHighlighted(order.id || order.orderId)) {
+                                  toggleOrderHighlight(order.id || order.orderId);
+                                }
                               } catch (error) {
                                 console.error('Error updating pizza status:', error);
                               }

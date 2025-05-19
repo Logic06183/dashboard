@@ -39,17 +39,40 @@ const DashboardPage = () => {
 
   // Calculate average completion time for orders
   const calculateAverageCompletionTime = (orders = []) => {
-    const completedOrders = orders.filter(order => order?.status === 'delivered');
-    if (completedOrders.length === 0) return 0;
+    // Filter to only include orders with valid preparation time data
+    const validOrders = orders.filter(order => 
+      order?.prepTimeMinutes || 
+      (order?.orderTime && (order?.deliveryTime || order?.completionTime))
+    );
+    
+    if (validOrders.length === 0) return 0;
 
-    const totalTime = completedOrders.reduce((sum, order) => {
-      if (!order?.orderTime) return sum;
-      const orderTime = new Date(order.orderTime);
-      const deliveryTime = new Date(order.deliveryTime || order.completionTime || orderTime);
-      return sum + (deliveryTime - orderTime);
-    }, 0);
+    let totalPrepTime = 0;
+    let countedOrders = 0;
 
-    return Math.round(totalTime / (completedOrders.length * 60000)); // Convert to minutes
+    validOrders.forEach(order => {
+      // If prepTimeMinutes is directly available, use it
+      if (order.prepTimeMinutes) {
+        totalPrepTime += order.prepTimeMinutes;
+        countedOrders++;
+        return;
+      }
+      
+      // Otherwise calculate from timestamps if available
+      if (order.orderTime && (order.deliveryTime || order.completionTime)) {
+        const orderTime = new Date(order.orderTime);
+        const completionTime = new Date(order.deliveryTime || order.completionTime);
+        const prepTimeMinutes = Math.round((completionTime - orderTime) / (1000 * 60));
+        
+        // Only count reasonable prep times
+        if (prepTimeMinutes >= 0 && prepTimeMinutes <= 180) {
+          totalPrepTime += prepTimeMinutes;
+          countedOrders++;
+        }
+      }
+    });
+
+    return countedOrders > 0 ? Math.round(totalPrepTime / countedOrders) : 0;
   };
 
   // Calculate order stats
@@ -99,17 +122,28 @@ const DashboardPage = () => {
     const orderCountByHour = {};
     
     orders.forEach(order => {
-      if (!order.orderTime || !order.completionTime) return;
-      const orderTime = new Date(order.orderTime);
-      const completionTime = new Date(order.completionTime);
-      const prepTimeMinutes = Math.round((completionTime - orderTime) / (1000 * 60));
+      // Check for prepTimeMinutes directly from the order data
+      if (order.prepTimeMinutes) {
+        const orderTime = new Date(order.orderTime);
+        const hour = format(orderTime, 'HH:00');
+        prepTimesByHour[hour] = (prepTimesByHour[hour] || 0) + order.prepTimeMinutes;
+        orderCountByHour[hour] = (orderCountByHour[hour] || 0) + 1;
+        return;
+      }
       
-      // Skip invalid prep times
-      if (prepTimeMinutes < 0 || prepTimeMinutes > 180) return;
-      
-      const hour = format(orderTime, 'HH:00');
-      prepTimesByHour[hour] = (prepTimesByHour[hour] || 0) + prepTimeMinutes;
-      orderCountByHour[hour] = (orderCountByHour[hour] || 0) + 1;
+      // Fallback to calculating from orderTime and completionTime if available
+      if (order.orderTime && order.completionTime) {
+        const orderTime = new Date(order.orderTime);
+        const completionTime = new Date(order.completionTime);
+        const prepTimeMinutes = Math.round((completionTime - orderTime) / (1000 * 60));
+        
+        // Skip invalid prep times
+        if (prepTimeMinutes < 0 || prepTimeMinutes > 180) return;
+        
+        const hour = format(orderTime, 'HH:00');
+        prepTimesByHour[hour] = (prepTimesByHour[hour] || 0) + prepTimeMinutes;
+        orderCountByHour[hour] = (orderCountByHour[hour] || 0) + 1;
+      }
     });
     
     // Calculate hourly averages and sort by time
@@ -130,23 +164,13 @@ const DashboardPage = () => {
 
     const busyHours = Object.entries(hourlyOrderCount)
       .map(([hour, count]) => ({
-        hour: `${hour.padStart(2, '0')}:00`,
+        hour: `${String(hour).padStart(2, '0')}:00`,
         orders: count
       }))
       .sort((a, b) => b.orders - a.orders)
       .slice(0, 3); // Top 3 busiest hours
 
-    // Calculate orders by platform
-    const platformOrders = {};
-    orders.forEach(order => {
-      if (!order.platform) return;
-      platformOrders[order.platform] = (platformOrders[order.platform] || 0) + 1;
-    });
-    const deliveryPlatforms = Object.entries(platformOrders)
-      .map(([platform, orders]) => ({ platform, orders }))
-      .sort((a, b) => b.orders - a.orders);
-
-    // Calculate total sales
+    // Calculate total sales function
     const calculateOrderTotal = (order) => {
       try {
         if (!order?.items || !Array.isArray(order.items)) {
@@ -162,7 +186,87 @@ const DashboardPage = () => {
         return 0;
       }
     };
+    
+    // Calculate orders by platform
+    const platformOrders = {};
+    const platformRevenue = {};
+    orders.forEach(order => {
+      if (!order.platform) return;
+      platformOrders[order.platform] = (platformOrders[order.platform] || 0) + 1;
+      
+      // Calculate revenue for this platform
+      const orderTotal = calculateOrderTotal(order);
+      platformRevenue[order.platform] = (platformRevenue[order.platform] || 0) + orderTotal;
+    });
+    
+    const deliveryPlatforms = Object.entries(platformOrders)
+      .map(([platform, orders]) => ({ platform, orders }))
+      .sort((a, b) => b.orders - a.orders);
+      
+    // Calculate revenue by platform for the business insights section
+    const revenueByPlatform = Object.entries(platformRevenue)
+      .map(([platform, revenue]) => ({ 
+        platform, 
+        revenue, 
+        orders: platformOrders[platform] || 0 
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
 
+    // Count unique customers
+    const uniqueCustomers = new Set();
+    const customerOrderCounts = {};
+    const customerTotalSpend = {};
+    
+    orders.forEach(order => {
+      if (order.customerName) {
+        uniqueCustomers.add(order.customerName);
+        customerOrderCounts[order.customerName] = (customerOrderCounts[order.customerName] || 0) + 1;
+        customerTotalSpend[order.customerName] = (customerTotalSpend[order.customerName] || 0) + calculateOrderTotal(order);
+      }
+    });
+    
+    // Find top customers by order count
+    const topCustomers = Object.entries(customerOrderCounts)
+      .map(([name, count]) => ({
+        name,
+        orderCount: count,
+        totalSpend: customerTotalSpend[name] || 0,
+        avgOrderValue: (customerTotalSpend[name] / count).toFixed(2)
+      }))
+      .sort((a, b) => b.orderCount - a.orderCount)
+      .slice(0, 5);
+    
+    // Calculate pizza metrics
+    let totalPizzasOrdered = 0;
+    let totalPizzasCooked = 0;
+    
+    orders.forEach(order => {
+      if (order.pizzas && Array.isArray(order.pizzas)) {
+        // Count total pizzas ordered
+        order.pizzas.forEach(pizza => {
+          const quantity = pizza.quantity || 1;
+          totalPizzasOrdered += quantity;
+          
+          // Check if this pizza is cooked
+          if (pizza.isCooked) {
+            totalPizzasCooked += quantity;
+          }
+        });
+        
+        // Also check the cooked array if it exists
+        if (order.cooked && Array.isArray(order.cooked)) {
+          order.pizzas.forEach((pizza, index) => {
+            if (order.cooked[index] && !pizza.isCooked) {
+              totalPizzasCooked += (pizza.quantity || 1);
+            }
+          });
+        }
+      }
+    });
+    
+    const pizzaCompletionRate = totalPizzasOrdered > 0 ? 
+      Math.round((totalPizzasCooked / totalPizzasOrdered) * 100) : 0;
+    
     // Calculate daily stats
     const dailyStats = {
       totalOrders: todayOrders.length,
@@ -171,8 +275,13 @@ const DashboardPage = () => {
       avgOrderValue: todayOrders.length > 0 
         ? (todayOrders.reduce((sum, order) => sum + calculateOrderTotal(order), 0) / todayOrders.length).toFixed(2)
         : 0,
-      avgCompletionTime: calculateAverageCompletionTime(todayOrders),
-      orderChange: parseFloat(orderChange)
+      avgPrepTime: calculateAverageCompletionTime(todayOrders),
+      orderChange: parseFloat(orderChange),
+      totalCustomers: uniqueCustomers.size,
+      topCustomers: topCustomers,
+      totalPizzasOrdered,
+      totalPizzasCooked,
+      pizzaCompletionRate
     };
 
     // Filter active orders (not ready or delivered)
@@ -184,7 +293,8 @@ const DashboardPage = () => {
       popularPizzas,
       deliveryPlatforms,
       preparationTimes,
-      busyHours
+      busyHours,
+      revenueByPlatform
     }));
   }, [orders]);
 
@@ -359,7 +469,7 @@ const DashboardPage = () => {
 
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Key Performance Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <StatsCard
             title="John's Daily Sales"
             value={'R' + analytics.dailyStats.totalSales.toFixed(2)}
@@ -380,9 +490,15 @@ const DashboardPage = () => {
           />
           <StatsCard
             title="Kitchen Status"
-            value={`${analytics.dailyStats.avgPrepTime} min`}
+            value={`${analytics.dailyStats.avgPrepTime || 0} min`}
             change={analytics.dailyStats.avgPrepTime > 30 ? 'Busy' : 'On Track'}
             trend={analytics.dailyStats.avgPrepTime > 30 ? 'down' : 'up'}
+          />
+          <StatsCard
+            title="Pizza Completion"
+            value={`${analytics.dailyStats.totalPizzasCooked || 0}/${analytics.dailyStats.totalPizzasOrdered || 0}`}
+            change={`${analytics.dailyStats.pizzaCompletionRate || 0}%`}
+            trend={analytics.dailyStats.pizzaCompletionRate >= 80 ? 'up' : 'down'}
           />
         </div>
 
@@ -484,10 +600,24 @@ const DashboardPage = () => {
             </div>
             <div className="p-4 bg-blue-50 rounded-lg">
               <h4 className="font-medium text-blue-800">Customer Base</h4>
-              <p className="text-sm text-blue-600 mt-2">
-                Total Customers: {analytics.dailyStats.totalCustomers}<br />
-                Avg Order Value: R{analytics.dailyStats.avgOrderValue}
-              </p>
+              <div className="text-sm text-blue-600 mt-2">
+                <p className="mb-2">
+                  <span className="font-semibold">Total Customers:</span> {analytics.dailyStats.totalCustomers || 0}<br />
+                  <span className="font-semibold">Avg Order Value:</span> R{analytics.dailyStats.avgOrderValue || 0}
+                </p>
+                {analytics.dailyStats.topCustomers && analytics.dailyStats.topCustomers.length > 0 && (
+                  <div>
+                    <p className="font-semibold mb-1">Top Customer:</p>
+                    <p className="pl-2">
+                      {analytics.dailyStats.topCustomers[0]?.name || 'N/A'}<br />
+                      <span className="text-xs">
+                        {analytics.dailyStats.topCustomers[0]?.orderCount || 0} orders · 
+                        R{analytics.dailyStats.topCustomers[0]?.totalSpend?.toFixed(2) || '0.00'} spent
+                      </span>
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

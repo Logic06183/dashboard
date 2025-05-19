@@ -1,47 +1,500 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useFirebaseOrders from '../hooks/useFirebaseOrders';
 import { PIZZA_INGREDIENTS } from '../data/ingredients';
 
-const InventoryManagement = ({ orders: propOrders = [] }) => {
-  const { data: firebaseOrders = [], loading: ordersLoading } = useFirebaseOrders();
+// UsageAnalysis component to calculate ingredient usage based on orders
+const UsageAnalysis = ({ orders }) => {
+  const [timeRange, setTimeRange] = useState('today');
+  const [forceUpdate, setForceUpdate] = useState(0);
   
-  // Combine orders from props and Firebase if available
-  const orders = propOrders.length > 0 ? propOrders : firebaseOrders;
-  const [inventory, setInventory] = useState({});
+  // Force a re-render when time range changes
+  const handleTimeRangeChange = (newRange) => {
+    setTimeRange(newRange);
+    setForceUpdate(prev => prev + 1); // Force re-render
+  };
+  
+  // Debug: Log the orders we received
+  useEffect(() => {
+    console.log('Orders received in UsageAnalysis:', orders);
+    if (orders && orders.length > 0) {
+      console.log('Sample order:', orders[0]);
+      if (orders[0].pizzas) {
+        console.log('Sample pizza:', orders[0].pizzas[0]);
+      }
+    }
+  }, [orders]);
+  
+  // Create test data to ensure the component works
+  const testOrders = [
+    {
+      id: 'test1',
+      orderTime: new Date().toISOString(),
+      pizzas: [
+        { quantity: 1, pizzaType: 'Mushroom Cloud Pizza' },
+        { quantity: 1, pizzaType: 'The Champ' }
+      ]
+    },
+    {
+      id: 'test2',
+      orderTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
+      pizzas: [
+        { quantity: 1, pizzaType: 'Sourdough Special' },
+        { quantity: 1, pizzaType: 'Vegan Delight' }
+      ]
+    },
+    {
+      id: 'test3',
+      orderTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+      pizzas: [
+        { quantity: 2, pizzaType: 'Margherita' },
+        { quantity: 1, pizzaType: 'Pepperoni' }
+      ]
+    },
+    {
+      id: 'test4',
+      orderTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+      pizzas: [
+        { quantity: 1, pizzaType: 'Hawaiian' },
+        { quantity: 1, pizzaType: 'Vegetarian' }
+      ]
+    },
+    {
+      id: 'test5',
+      orderTime: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
+      pizzas: [
+        { quantity: 2, pizzaType: 'Meat Lovers' }
+      ]
+    }
+  ];
+  
+  // Use real orders from Firebase
+  const actualOrders = useMemo(() => {
+    // Only use real orders from Firebase
+    if (orders && orders.length > 0) {
+      console.log('Using real orders from Firebase, count:', orders.length);
+      return orders;
+    }
+    
+    console.log('No real orders available, using empty array');
+    return [];
+  }, [orders]);
+  
+  // Filter orders based on selected time range
+  const filteredOrders = useMemo(() => {
+    console.log('Filtering orders for time range:', timeRange); 
+    console.log('Total orders available:', actualOrders?.length || 0);
+    
+    if (!actualOrders || actualOrders.length === 0) {
+      console.log('No orders available');
+      return [];
+    }
+    
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const lastWeek = new Date(today);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(lastMonth.getMonth() - 1);
+    
+    const filtered = actualOrders.filter(order => {
+      // Handle different date formats from Firebase
+      let orderDate;
+      if (order.orderTime) {
+        orderDate = new Date(order.orderTime);
+      } else if (order.createdAt) {
+        orderDate = new Date(order.createdAt);
+      } else if (order.timestamp) {
+        // Firebase timestamp can be a number
+        orderDate = new Date(typeof order.timestamp === 'number' ? order.timestamp : order.timestamp.toDate?.());
+      } else {
+        console.log('Order has no date information:', order);
+        return false;
+      }
+      
+      if (isNaN(orderDate.getTime())) {
+        console.log('Invalid date for order:', order);
+        return false;
+      }
+      
+      console.log(`Order date: ${orderDate} for time range: ${timeRange}`);
+      
+      switch (timeRange) {
+        case 'today':
+          return orderDate >= today;
+        case 'yesterday':
+          return orderDate >= yesterday && orderDate < today;
+        case 'week':
+          return orderDate >= lastWeek;
+        case 'month':
+          return orderDate >= lastMonth;
+        default: // 'all'
+          return true; // All time
+      }
+    });
+    
+    console.log('Filtered orders count:', filtered.length);
+    return filtered;
+  }, [actualOrders, timeRange, forceUpdate]);
+  
+  // Calculate daily average usage for each ingredient
+  const calculateDailyUsage = (usage, days) => {
+    const dailyUsage = {};
+    Object.entries(usage).forEach(([ingredient, data]) => {
+      dailyUsage[ingredient] = {
+        ...data,
+        used: data.used / days
+      };
+    });
+    return dailyUsage;
+  };
+  
+  // Calculate ingredient usage based on filtered orders
+  const ingredientUsage = useMemo(() => {
+    console.log('Recalculating ingredient usage...');
+    const usage = {};
+    
+    // Initialize with all ingredients from PIZZA_INGREDIENTS
+    const allIngredients = new Set();
+    
+    // Add base ingredients
+    Object.keys(PIZZA_INGREDIENTS.base).forEach(ingredient => {
+      allIngredients.add(ingredient);
+    });
+    
+    // Add pizza-specific ingredients
+    Object.values(PIZZA_INGREDIENTS.pizzas).forEach(pizza => {
+      Object.keys(pizza.ingredients).forEach(ingredient => {
+        allIngredients.add(ingredient);
+      });
+    });
+    
+    console.log('All ingredients:', [...allIngredients]);
+    
+    // Initialize usage object with all ingredients
+    allIngredients.forEach(ingredient => {
+      usage[ingredient] = { used: 0, unit: '', category: '' };
+    });
+    
+    // Debug: Log filtered orders
+    console.log('Processing filtered orders for ingredient usage, count:', filteredOrders.length);
+    
+    // Use filtered orders from Firebase
+    const ordersToProcess = filteredOrders;
+    console.log('Using filtered orders from Firebase, count:', ordersToProcess.length);
+    
+    // Process each order
+    ordersToProcess.forEach(order => {
+      console.log('Processing order:', order.id || 'unknown id');
+      
+      if (!order.pizzas || !Array.isArray(order.pizzas)) {
+        console.log('Order has no pizzas array:', order);
+        return;
+      }
+      
+      order.pizzas.forEach(pizza => {
+        const quantity = pizza.quantity || 1;
+        let pizzaType = pizza.pizzaType || pizza.type;
+        
+        // Debug pizza info
+        console.log('Processing pizza:', pizzaType, 'quantity:', quantity);
+        
+        // Handle case sensitivity and common variations
+        if (pizzaType) {
+          // Convert to title case for consistency
+          pizzaType = pizzaType.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+            
+          // Check if the pizza type exists exactly as is in our database
+          if (PIZZA_INGREDIENTS.pizzas[pizzaType]) {
+            // Perfect match - keep as is
+            console.log('Exact match found for pizza type:', pizzaType);
+          } 
+          // Handle common variations
+          else if (pizzaType.includes('Margherita') || pizzaType.includes('Margarita')) {
+            pizzaType = 'Margherita';
+          } else if (pizzaType.includes('Pepperoni')) {
+            pizzaType = 'Pepperoni';
+          } else if (pizzaType.includes('Vegetarian') || pizzaType.includes('Veggie')) {
+            pizzaType = 'Vegetarian';
+          } else if (pizzaType.includes('Hawaiian')) {
+            pizzaType = 'Hawaiian';
+          } else if (pizzaType.includes('Meat') && (pizzaType.includes('Lover') || pizzaType.includes('Feast'))) {
+            pizzaType = 'Meat Lovers';
+          } else if (pizzaType.includes('Mushroom') && pizzaType.includes('Cloud')) {
+            pizzaType = 'Mushroom Cloud Pizza';
+          } else if (pizzaType.includes('Champ')) {
+            pizzaType = 'The Champ';
+          } else if (pizzaType.includes('Sourdough') && pizzaType.includes('Special')) {
+            pizzaType = 'Sourdough Special';
+          } else if (pizzaType.includes('Vegan')) {
+            pizzaType = 'Vegan Delight';
+          }
+        }
+        
+        // Check if we have this pizza type in our ingredients database
+        if (!pizzaType || !PIZZA_INGREDIENTS.pizzas[pizzaType]) {
+          console.log('Unknown pizza type:', pizzaType);
+          return;
+        }
+        
+        console.log('Matched pizza type:', pizzaType);
+        
+        // Add base ingredients for each pizza
+        Object.entries(PIZZA_INGREDIENTS.base).forEach(([ingredient, data]) => {
+          if (!usage[ingredient]) {
+            usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+          }
+          usage[ingredient].used += data.amount * quantity;
+          usage[ingredient].unit = data.unit;
+          usage[ingredient].category = data.category;
+          console.log(`Added base ingredient ${ingredient}: ${data.amount * quantity} ${data.unit}`);
+        });
+        
+        // Add pizza-specific ingredients
+        Object.entries(PIZZA_INGREDIENTS.pizzas[pizzaType].ingredients).forEach(([ingredient, data]) => {
+          if (!usage[ingredient]) {
+            usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+          }
+          usage[ingredient].used += data.amount * quantity;
+          usage[ingredient].unit = data.unit;
+          usage[ingredient].category = data.category;
+          console.log(`Added pizza-specific ingredient ${ingredient}: ${data.amount * quantity} ${data.unit}`);
+        });
+      });
+    });
+    
+    // Log final usage
+    console.log('Final ingredient usage:');
+    Object.entries(usage).forEach(([ingredient, data]) => {
+      console.log(`${ingredient}: ${data.used} ${data.unit}`);
+    });
+    
+    return usage;
+  }, [filteredOrders]);
+  
+  // Group ingredients by category for better display
+  const ingredientsByCategory = useMemo(() => {
+    const categories = {};
+    
+    Object.entries(ingredientUsage).forEach(([ingredient, data]) => {
+      if (!categories[data.category]) {
+        categories[data.category] = [];
+      }
+      categories[data.category].push({
+        name: ingredient,
+        ...data
+      });
+    });
+    
+    // Sort ingredients within each category by usage (highest first)
+    Object.keys(categories).forEach(category => {
+      categories[category].sort((a, b) => b.used - a.used);
+    });
+    
+    return categories;
+  }, [ingredientUsage]);
+  
+  // Force component to re-render when filtered orders change
+  useEffect(() => {
+    console.log('Filtered orders updated, count:', filteredOrders.length);
+  }, [filteredOrders.length]);
+  
+  return (
+    <div>
+      <div className="mb-4 flex space-x-4">
+        {['today', 'yesterday', 'week', 'month', 'all'].map(period => (
+          <button
+            key={period}
+            onClick={() => handleTimeRangeChange(period)}
+            className={`px-3 py-1 rounded ${timeRange === period ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+          >
+            {period === 'today' && 'Today'}
+            {period === 'yesterday' && 'Yesterday'}
+            {period === 'week' && 'Last 7 Days'}
+            {period === 'month' && 'Last 30 Days'}
+            {period === 'all' && 'All Time'}
+          </button>
+        ))}
+      </div>
+      
+      <div className="mb-4">
+        <p className="text-sm text-gray-600" key={`order-count-${filteredOrders.length}-${timeRange}`}>
+          Based on {filteredOrders.length} orders during the selected period.
+        </p>
+      </div>
+      
+      {Object.keys(ingredientsByCategory).length === 0 ? (
+        <p>No ingredient usage data available for the selected period.</p>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(ingredientsByCategory).map(([category, ingredients]) => (
+            <div key={category} className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-lg mb-2 capitalize">{category}</h4>
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-sm text-gray-600">
+                    <th className="py-2">Ingredient</th>
+                    <th className="py-2">Amount Used</th>
+                    <th className="py-2">Unit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ingredients.map(ingredient => (
+                    <tr key={ingredient.name} className="border-t border-gray-200">
+                      <td className="py-2 capitalize">{ingredient.name.replace(/_/g, ' ')}</td>
+                      <td className="py-2">{ingredient.used.toFixed(2)}</td>
+                      <td className="py-2">{ingredient.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Main InventoryManagement component
+const InventoryManagement = ({ orders: propOrders = [] }) => {
   const [activeView, setActiveView] = useState('current');
+  const [inventory, setInventory] = useState({});
   const [inventoryLoading, setInventoryLoading] = useState(true);
   const [inventoryError, setInventoryError] = useState(null);
-
+  const [saveStatus, setSaveStatus] = useState('');
+  const [editingThreshold, setEditingThreshold] = useState(null);
+  const [thresholdValue, setThresholdValue] = useState('');
+  const [editingAmount, setEditingAmount] = useState(null);
+  const [amountValue, setAmountValue] = useState('');
+  const [customAmount, setCustomAmount] = useState(1);
+  const [showLowStockNotification, setShowLowStockNotification] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [forecastDays, setForecastDays] = useState(7);
+  
+  // Get orders from Firebase
+  const { data: firebaseOrders = [], loading: ordersLoading } = useFirebaseOrders();
+  const orders = propOrders.length > 0 ? propOrders : firebaseOrders;
+  
   // Load inventory data
   useEffect(() => {
-    const loadInventory = async () => {
+    const loadInventory = () => {
       try {
-        setInventoryLoading(true);
-        // Simulated inventory data
-        const mockInventory = {
-          'sourdough_dough': { amount: 50, unit: 'balls', category: 'dough', threshold: 20 },
-          'tomato_sauce': { amount: 8, unit: 'liters', category: 'sauce', threshold: 3 },
-          'mozzarella_cheese': { amount: 12, unit: 'kg', category: 'cheese', threshold: 5 },
-          'pepperoni': { amount: 6, unit: 'kg', category: 'meat', threshold: 2 },
-          'mushrooms': { amount: 4, unit: 'kg', category: 'vegetable', threshold: 2 },
-          'fresh_basil': { amount: 1.5, unit: 'kg', category: 'herb', threshold: 0.5 }
-        };
-        setInventory(mockInventory);
+        // Create sample inventory data
+        console.log('Creating sample inventory data');
+        const sampleInventory = {};
+        
+        // Initialize inventory with all ingredients from PIZZA_INGREDIENTS
+        Object.keys(PIZZA_INGREDIENTS.base).forEach(ingredient => {
+          const data = PIZZA_INGREDIENTS.base[ingredient];
+          sampleInventory[ingredient] = { 
+            amount: Math.floor(Math.random() * 100) + 20, 
+            unit: data.unit,
+            category: data.category,
+            threshold: 10
+          };
+        });
+        
+        // Add all pizza-specific ingredients
+        Object.values(PIZZA_INGREDIENTS.pizzas).forEach(pizza => {
+          Object.entries(pizza.ingredients).forEach(([ingredient, data]) => {
+            if (!sampleInventory[ingredient]) {
+              sampleInventory[ingredient] = {
+                amount: Math.floor(Math.random() * 100) + 20,
+                unit: data.unit,
+                category: data.category,
+                threshold: 10
+              };
+            }
+          });
+        });
+        
+        setInventory(sampleInventory);
         setInventoryLoading(false);
       } catch (error) {
-        console.error('Error loading inventory:', error);
-        setInventoryError('Failed to load inventory data');
+        console.error('Error creating inventory:', error);
+        setInventoryError('Failed to create inventory data');
         setInventoryLoading(false);
       }
     };
+    
     loadInventory();
   }, []);
+
+  // Save inventory data to Firebase
+  const saveInventoryToFirebase = async () => {
+    try {
+      setSaveStatus('Saving inventory...');
+      
+      // Get Firebase instance
+      const app = getFirebaseApp();
+      const db = getFirestore(app);
+      
+      // Update each inventory item
+      for (const [ingredient, data] of Object.entries(inventory)) {
+        await setDoc(doc(db, 'inventory', ingredient), data);
+      }
+      
+      setSaveStatus('Inventory saved successfully!');
+      setTimeout(() => setSaveStatus(''), 3000);
+    } catch (error) {
+      console.error('Error saving inventory:', error);
+      setSaveStatus(`Error: ${error.message}`);
+    }
+  };
 
   // Check if stock is low
   const isLowStock = (ingredient) => {
     const item = inventory[ingredient];
     return item && item.amount <= (item.threshold || 0);
   };
+  
+  // Calculate total inventory cost
+  const calculateInventoryCost = () => {
+    let totalCost = 0;
+    
+    Object.entries(inventory).forEach(([ingredient, data]) => {
+      // Get cost per unit from PIZZA_INGREDIENTS
+      let costPerUnit = 0;
+      
+      // Check base ingredients
+      if (PIZZA_INGREDIENTS.base[ingredient]) {
+        costPerUnit = PIZZA_INGREDIENTS.base[ingredient].cost || 0;
+      } else {
+        // Check pizza-specific ingredients
+        for (const pizza of Object.values(PIZZA_INGREDIENTS.pizzas)) {
+          if (pizza.ingredients[ingredient]) {
+            costPerUnit = pizza.ingredients[ingredient].cost || 0;
+            break;
+          }
+        }
+      }
+      
+      // Calculate cost for this ingredient
+      const ingredientCost = data.amount * costPerUnit;
+      totalCost += ingredientCost;
+    });
+    
+    return totalCost.toFixed(2);
+  };
+  
+  // Check for low stock items and update notification
+  useEffect(() => {
+    const lowItems = Object.entries(inventory)
+      .filter(([ingredient, data]) => isLowStock(ingredient))
+      .map(([ingredient, data]) => ({
+        name: ingredient,
+        amount: data.amount,
+        threshold: data.threshold || 0,
+        unit: data.unit
+      }));
+    
+    setLowStockItems(lowItems);
+    setShowLowStockNotification(lowItems.length > 0);
+  }, [inventory, isLowStock]);
 
   // Increment inventory item amount
   const handleIncrement = (ingredient, amount = 1) => {
@@ -64,6 +517,50 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
       }
     }));
   };
+  
+  // Start editing threshold
+  const startEditingThreshold = (ingredient) => {
+    setEditingThreshold(ingredient);
+    setThresholdValue(inventory[ingredient]?.threshold?.toString() || '10');
+  };
+  
+  // Save threshold
+  const saveThreshold = (ingredient) => {
+    const threshold = parseInt(thresholdValue, 10);
+    if (!isNaN(threshold) && threshold >= 0) {
+      setInventory(prev => ({
+        ...prev,
+        [ingredient]: {
+          ...prev[ingredient],
+          threshold
+        }
+      }));
+    }
+    setEditingThreshold(null);
+  };
+  
+  // Start editing amount
+  const startEditingAmount = (ingredient) => {
+    setEditingAmount(ingredient);
+    setAmountValue(inventory[ingredient]?.amount?.toString() || '0');
+  };
+  
+  // Save amount
+  const saveAmount = (ingredient) => {
+    const amount = parseInt(amountValue, 10);
+    if (!isNaN(amount) && amount >= 0) {
+      setInventory(prev => ({
+        ...prev,
+        [ingredient]: {
+          ...prev[ingredient],
+          amount
+        }
+      }));
+    }
+    setEditingAmount(null);
+  };
+
+  // This duplicate function has been removed
 
   if (inventoryLoading) {
     return (
@@ -86,79 +583,471 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
       </div>
     );
   }
-
+  
+  // Function to calculate daily average usage for each ingredient
+  const calculateDailyUsage = useCallback((usage, days) => {
+    if (days <= 0) return usage;
+    const dailyUsage = {};
+    Object.entries(usage).forEach(([ingredient, data]) => {
+      dailyUsage[ingredient] = {
+        ...data,
+        used: data.used / days
+      };
+    });
+    return dailyUsage;
+  }, []);
+  
+  // Process orders to calculate weekly usage
+  const processWeeklyUsage = useCallback(() => {
+    if (!orders || orders.length === 0) {
+      return {};
+    }
+    
+    const now = new Date();
+    const lastWeek = new Date(now);
+    lastWeek.setDate(lastWeek.getDate() - 7);
+    
+    const weekOrders = orders.filter(order => {
+      let orderDate;
+      if (order.orderTime) {
+        orderDate = new Date(order.orderTime);
+      } else if (order.createdAt) {
+        orderDate = new Date(order.createdAt);
+      } else if (order.timestamp) {
+        orderDate = new Date(typeof order.timestamp === 'number' ? order.timestamp : order.timestamp.toDate?.());
+      } else {
+        return false;
+      }
+      
+      return orderDate >= lastWeek;
+    });
+    
+    // Process orders to get usage
+    const usage = {};
+    
+    // Initialize with all ingredients
+    const allIngredients = new Set();
+    Object.keys(PIZZA_INGREDIENTS.base).forEach(ingredient => {
+      allIngredients.add(ingredient);
+    });
+    Object.values(PIZZA_INGREDIENTS.pizzas).forEach(pizza => {
+      Object.keys(pizza.ingredients).forEach(ingredient => {
+        allIngredients.add(ingredient);
+      });
+    });
+    
+    allIngredients.forEach(ingredient => {
+      usage[ingredient] = { used: 0, unit: '', category: '' };
+    });
+    
+    // Calculate usage from orders
+    weekOrders.forEach(order => {
+      if (!order.pizzas || !Array.isArray(order.pizzas)) return;
+      
+      order.pizzas.forEach(pizza => {
+        const quantity = pizza.quantity || 1;
+        let pizzaType = pizza.pizzaType || pizza.type;
+        
+        if (!pizzaType) return;
+        
+        // Convert to title case
+        pizzaType = pizzaType.split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+          
+        // Handle variations
+        if (pizzaType.includes('Margherita') || pizzaType.includes('Margarita')) {
+          pizzaType = 'Margherita';
+        } else if (pizzaType.includes('Pepperoni')) {
+          pizzaType = 'Pepperoni';
+        } else if (pizzaType.includes('Vegetarian') || pizzaType.includes('Veggie')) {
+          pizzaType = 'Vegetarian';
+        } else if (pizzaType.includes('Hawaiian')) {
+          pizzaType = 'Hawaiian';
+        } else if (pizzaType.includes('Meat') && (pizzaType.includes('Lover') || pizzaType.includes('Feast'))) {
+          pizzaType = 'Meat Lovers';
+        } else if (pizzaType.includes('Mushroom') && pizzaType.includes('Cloud')) {
+          pizzaType = 'Mushroom Cloud Pizza';
+        } else if (pizzaType.includes('Champ')) {
+          pizzaType = 'The Champ';
+        } else if (pizzaType.includes('Sourdough') && pizzaType.includes('Special')) {
+          pizzaType = 'Sourdough Special';
+        } else if (pizzaType.includes('Vegan')) {
+          pizzaType = 'Vegan Delight';
+        }
+        
+        if (!PIZZA_INGREDIENTS.pizzas[pizzaType]) return;
+        
+        // Add base ingredients
+        Object.entries(PIZZA_INGREDIENTS.base).forEach(([ingredient, data]) => {
+          if (!usage[ingredient]) {
+            usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+          }
+          usage[ingredient].used += data.amount * quantity;
+          usage[ingredient].unit = data.unit;
+          usage[ingredient].category = data.category;
+        });
+        
+        // Add pizza-specific ingredients
+        Object.entries(PIZZA_INGREDIENTS.pizzas[pizzaType].ingredients).forEach(([ingredient, data]) => {
+          if (!usage[ingredient]) {
+            usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+          }
+          usage[ingredient].used += data.amount * quantity;
+          usage[ingredient].unit = data.unit;
+          usage[ingredient].category = data.category;
+        });
+      });
+    });
+    
+    // Calculate daily usage
+    return calculateDailyUsage(usage, 7);
+  }, [orders, calculateDailyUsage]);
+  
+  // Calculate daily usage from the last week - moved outside conditional rendering
+  const lastWeekUsage = useMemo(() => processWeeklyUsage(), [processWeeklyUsage]);
+  
+  // Process forecast data based on inventory and usage
+  const processForecastData = useCallback(() => {
+    // Calculate forecast for each ingredient
+    const forecast = [];
+    
+    Object.entries(inventory).forEach(([ingredient, data]) => {
+      const dailyUsage = lastWeekUsage[ingredient]?.used || 0;
+      const daysRemaining = dailyUsage > 0 ? Math.floor(data.amount / dailyUsage) : 999;
+      const reorderDate = new Date();
+      reorderDate.setDate(reorderDate.getDate() + daysRemaining);
+      
+      // Get cost per unit
+      let costPerUnit = 0;
+      if (PIZZA_INGREDIENTS.base[ingredient]) {
+        costPerUnit = PIZZA_INGREDIENTS.base[ingredient].cost || 0;
+      } else {
+        for (const pizza of Object.values(PIZZA_INGREDIENTS.pizzas)) {
+          if (pizza.ingredients[ingredient]) {
+            costPerUnit = pizza.ingredients[ingredient].cost || 0;
+            break;
+          }
+        }
+      }
+      
+      forecast.push({
+        name: ingredient,
+        currentStock: data.amount,
+        unit: data.unit,
+        dailyUsage: dailyUsage.toFixed(2),
+        daysRemaining: daysRemaining,
+        reorderDate: reorderDate,
+        costPerUnit: costPerUnit,
+        category: data.category
+      });
+    });
+    
+    // Sort by days remaining (ascending)
+    return forecast.sort((a, b) => a.daysRemaining - b.daysRemaining);
+  }, [inventory, lastWeekUsage]);
+  
+  // Calculate forecast data
+  const forecastData = useMemo(() => processForecastData(), [processForecastData]);
+  
   return (
     <div className="p-6">
       <h2 className="text-2xl font-semibold mb-6">Inventory Management</h2>
+      
+      {showLowStockNotification && (
+        <div className="mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md">
+          <div className="flex items-center">
+            <svg className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <h3 className="font-bold">Low Stock Alert</h3>
+          </div>
+          <p className="mt-2">The following ingredients are running low:</p>
+          <ul className="mt-2 ml-6 list-disc">
+            {lowStockItems.map(item => (
+              <li key={item.name}>
+                <span className="font-semibold capitalize">{item.name.replace(/_/g, ' ')}</span>: {item.amount} {item.unit} 
+                (threshold: {item.threshold} {item.unit})
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       
       <div className="mb-6">
         <div className="flex space-x-4">
           <button
             onClick={() => setActiveView('current')}
-            className={activeView === 'current' ? 'font-bold' : ''}
+            className={`px-4 py-2 rounded ${activeView === 'current' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
           >
             Current Stock
           </button>
           <button
             onClick={() => setActiveView('usage')}
-            className={activeView === 'usage' ? 'font-bold' : ''}
+            className={`px-4 py-2 rounded ${activeView === 'usage' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
           >
             Usage Analysis
           </button>
           <button
             onClick={() => setActiveView('forecast')}
-            className={activeView === 'forecast' ? 'font-bold' : ''}
+            className={`px-4 py-2 rounded ${activeView === 'forecast' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
           >
             Inventory Forecast
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded p-4">
+      <div className="bg-white rounded p-4 shadow">
         {activeView === 'current' && (
           <div>
-            <h3 className="font-semibold mb-4">Current Stock Levels</h3>
-            <table className="w-full">
-              <thead>
-                <tr>
-                  <th className="text-left">Ingredient</th>
-                  <th className="text-left">Category</th>
-                  <th className="text-left">Amount</th>
-                  <th className="text-left">Unit</th>
-                  <th className="text-left">Status</th>
-                  <th className="text-left">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(inventory).map(([ingredient, data]) => (
-                  <tr key={ingredient}>
-                    <td>{ingredient.replace(/_/g, ' ')}</td>
-                    <td>{data.category}</td>
-                    <td>{data.amount}</td>
-                    <td>{data.unit}</td>
-                    <td>{isLowStock(ingredient) ? 'Low Stock' : 'In Stock'}</td>
-                    <td>
-                      <button onClick={() => handleDecrement(ingredient)}>-</button>
-                      <button onClick={() => handleIncrement(ingredient)} className="ml-2">+</button>
-                    </td>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-xl">Current Stock Levels</h3>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <label htmlFor="customAmount" className="mr-2 text-sm">Adjustment Amount:</label>
+                  <input 
+                    id="customAmount"
+                    type="number" 
+                    min="1" 
+                    max="100"
+                    value={customAmount} 
+                    onChange={(e) => setCustomAmount(Math.max(1, parseInt(e.target.value) || 1))}
+                    className="border rounded px-2 py-1 w-16 text-center"
+                  />
+                </div>
+                <button 
+                  onClick={saveInventoryToFirebase}
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
+                >
+                  Save Inventory
+                </button>
+              </div>
+            </div>
+            
+            {saveStatus && (
+              <div className={`mb-4 p-2 rounded ${saveStatus.includes('Error') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                {saveStatus}
+              </div>
+            )}
+            
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="font-semibold text-lg">Inventory Cost Analysis</h4>
+                  <p className="text-gray-600">Total value of current inventory</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-3xl font-bold text-blue-600">${calculateInventoryCost()}</p>
+                  <p className="text-sm text-gray-500">{Object.keys(inventory).length} ingredients in stock</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-3 border-b">Ingredient</th>
+                    <th className="text-left p-3 border-b">Category</th>
+                    <th className="text-left p-3 border-b">Current Amount</th>
+                    <th className="text-left p-3 border-b">Unit</th>
+                    <th className="text-left p-3 border-b">Low Stock Threshold</th>
+                    <th className="text-left p-3 border-b">Status</th>
+                    <th className="text-left p-3 border-b">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {Object.entries(inventory)
+                    .sort(([a], [b]) => a.localeCompare(b)) // Sort alphabetically
+                    .map(([ingredient, data]) => (
+                    <tr key={ingredient} className={isLowStock(ingredient) ? 'bg-red-50' : 'hover:bg-gray-50'}>
+                      <td className="p-3 border-b capitalize">{ingredient.replace(/_/g, ' ')}</td>
+                      <td className="p-3 border-b capitalize">{data.category}</td>
+                      <td className="p-3 border-b">
+                        {editingAmount === ingredient ? (
+                          <div className="flex items-center">
+                            <input 
+                              type="number" 
+                              value={amountValue} 
+                              onChange={(e) => setAmountValue(e.target.value)}
+                              className="border rounded px-2 py-1 w-20 text-center"
+                            />
+                            <button 
+                              onClick={() => saveAmount(ingredient)}
+                              className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-xs"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <span 
+                              className="cursor-pointer hover:text-blue-600"
+                              onClick={() => startEditingAmount(ingredient)}
+                            >
+                              {data.amount}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 border-b">{data.unit}</td>
+                      <td className="p-3 border-b">
+                        {editingThreshold === ingredient ? (
+                          <div className="flex items-center">
+                            <input 
+                              type="number" 
+                              value={thresholdValue} 
+                              onChange={(e) => setThresholdValue(e.target.value)}
+                              className="border rounded px-2 py-1 w-20 text-center"
+                            />
+                            <button 
+                              onClick={() => saveThreshold(ingredient)}
+                              className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-xs"
+                            >
+                              Save
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <span 
+                              className="cursor-pointer hover:text-blue-600"
+                              onClick={() => startEditingThreshold(ingredient)}
+                            >
+                              {data.threshold || 10}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3 border-b">
+                        <span className={`px-2 py-1 rounded text-xs ${isLowStock(ingredient) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                          {isLowStock(ingredient) ? 'Low Stock' : 'In Stock'}
+                        </span>
+                      </td>
+                      <td className="p-3 border-b">
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => handleDecrement(ingredient, customAmount)}
+                            className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                          >
+                            -
+                          </button>
+                          <button 
+                            onClick={() => handleIncrement(ingredient, customAmount)} 
+                            className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
         
         {activeView === 'usage' && (
           <div>
             <h3 className="font-semibold mb-4">Usage Analysis</h3>
-            <p>Usage analysis will be implemented here.</p>
+            <UsageAnalysis orders={orders} />
           </div>
         )}
 
         {activeView === 'forecast' && (
           <div>
-            <h3 className="font-semibold mb-4">Inventory Forecast</h3>
-            <p>Inventory forecast will be implemented here.</p>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-xl">Inventory Forecast</h3>
+              <div className="flex items-center space-x-2">
+                <label htmlFor="forecastDays" className="text-sm">Forecast Period:</label>
+                <select
+                  id="forecastDays"
+                  value={forecastDays}
+                  onChange={(e) => setForecastDays(parseInt(e.target.value))}
+                  className="border rounded px-2 py-1"
+                >
+                  <option value="7">7 Days</option>
+                  <option value="14">14 Days</option>
+                  <option value="30">30 Days</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-semibold">Ingredients Running Low</h4>
+                <p className="text-3xl font-bold text-red-600">{lowStockItems.length}</p>
+                <p className="text-sm text-gray-600">Need immediate attention</p>
+              </div>
+              
+              <div className="bg-green-50 p-4 rounded-lg">
+                <h4 className="font-semibold">Estimated Weekly Cost</h4>
+                <p className="text-3xl font-bold text-green-600">
+                  ${forecastData
+                    .reduce((total, item) => total + (parseFloat(item.dailyUsage) * 7 * item.costPerUnit), 0)
+                    .toFixed(2)}
+                </p>
+                <p className="text-sm text-gray-600">Based on current usage</p>
+              </div>
+              
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <h4 className="font-semibold">Most Used Ingredient</h4>
+                {forecastData.length > 0 ? (
+                  <>
+                    <p className="text-xl font-bold text-purple-600 capitalize">
+                      {forecastData.sort((a, b) => parseFloat(b.dailyUsage) - parseFloat(a.dailyUsage))[0].name.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {forecastData.sort((a, b) => parseFloat(b.dailyUsage) - parseFloat(a.dailyUsage))[0].dailyUsage} {forecastData.sort((a, b) => parseFloat(b.dailyUsage) - parseFloat(a.dailyUsage))[0].unit}/day
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-gray-600">No data available</p>
+                )}
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left p-3 border-b">Ingredient</th>
+                    <th className="text-left p-3 border-b">Category</th>
+                    <th className="text-left p-3 border-b">Current Stock</th>
+                    <th className="text-left p-3 border-b">Daily Usage</th>
+                    <th className="text-left p-3 border-b">Days Remaining</th>
+                    <th className="text-left p-3 border-b">Reorder Date</th>
+                    <th className="text-left p-3 border-b">Cost Per Unit</th>
+                    <th className="text-left p-3 border-b">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {forecastData.map(item => (
+                    <tr 
+                      key={item.name} 
+                      className={item.daysRemaining <= 7 ? 'bg-red-50' : item.daysRemaining <= 14 ? 'bg-yellow-50' : 'hover:bg-gray-50'}
+                    >
+                      <td className="p-3 border-b capitalize">{item.name.replace(/_/g, ' ')}</td>
+                      <td className="p-3 border-b capitalize">{item.category}</td>
+                      <td className="p-3 border-b">{item.currentStock} {item.unit}</td>
+                      <td className="p-3 border-b">{item.dailyUsage} {item.unit}/day</td>
+                      <td className="p-3 border-b font-semibold">{item.daysRemaining === 999 ? '∞' : item.daysRemaining}</td>
+                      <td className="p-3 border-b">
+                        {item.daysRemaining === 999 ? 'N/A' : item.reorderDate.toLocaleDateString()}
+                      </td>
+                      <td className="p-3 border-b">${item.costPerUnit.toFixed(2)}/{item.unit}</td>
+                      <td className="p-3 border-b">
+                        <span 
+                          className={`px-2 py-1 rounded text-xs ${item.daysRemaining <= 7 ? 'bg-red-100 text-red-700' : item.daysRemaining <= 14 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}
+                        >
+                          {item.daysRemaining <= 7 ? 'Order Now' : item.daysRemaining <= 14 ? 'Order Soon' : 'Good Stock'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
