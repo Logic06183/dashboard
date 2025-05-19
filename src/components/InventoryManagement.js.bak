@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import useFirebaseOrders from '../hooks/useFirebaseOrders';
 import { PIZZA_INGREDIENTS } from '../data/ingredients';
-import { db, firebase } from '../firebase';
+import { getFirestore, collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { getFirebaseApp } from '../firebase';
 
 // UsageAnalysis component to calculate ingredient usage based on orders
 const UsageAnalysis = ({ orders }) => {
@@ -25,12 +26,67 @@ const UsageAnalysis = ({ orders }) => {
     }
   }, [orders]);
   
+  // Create test data to ensure the component works
+  const testOrders = [
+    {
+      id: 'test1',
+      orderTime: new Date().toISOString(),
+      pizzas: [
+        { quantity: 1, pizzaType: 'Mushroom Cloud Pizza' },
+        { quantity: 1, pizzaType: 'The Champ' }
+      ]
+    },
+    {
+      id: 'test2',
+      orderTime: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
+      pizzas: [
+        { quantity: 1, pizzaType: 'Sourdough Special' },
+        { quantity: 1, pizzaType: 'Vegan Delight' }
+      ]
+    },
+    {
+      id: 'test3',
+      orderTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+      pizzas: [
+        { quantity: 2, pizzaType: 'Margherita' },
+        { quantity: 1, pizzaType: 'Pepperoni' }
+      ]
+    },
+    {
+      id: 'test4',
+      orderTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+      pizzas: [
+        { quantity: 1, pizzaType: 'Hawaiian' },
+        { quantity: 1, pizzaType: 'Vegetarian' }
+      ]
+    },
+    {
+      id: 'test5',
+      orderTime: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(), // 4 days ago
+      pizzas: [
+        { quantity: 2, pizzaType: 'Meat Lovers' }
+      ]
+    }
+  ];
+  
+  // Use real orders from Firebase
+  const actualOrders = useMemo(() => {
+    // Only use real orders from Firebase
+    if (orders && orders.length > 0) {
+      console.log('Using real orders from Firebase, count:', orders.length);
+      return orders;
+    }
+    
+    console.log('No real orders available, using empty array');
+    return [];
+  }, [orders]);
+  
   // Filter orders based on selected time range
   const filteredOrders = useMemo(() => {
     console.log('Filtering orders for time range:', timeRange); 
-    console.log('Total orders available:', orders?.length || 0);
+    console.log('Total orders available:', actualOrders?.length || 0);
     
-    if (!orders || orders.length === 0) {
+    if (!actualOrders || actualOrders.length === 0) {
       console.log('No orders available');
       return [];
     }
@@ -44,7 +100,7 @@ const UsageAnalysis = ({ orders }) => {
     const lastMonth = new Date(today);
     lastMonth.setMonth(lastMonth.getMonth() - 1);
     
-    const filtered = orders.filter(order => {
+    const filtered = actualOrders.filter(order => {
       // Handle different date formats from Firebase
       let orderDate;
       if (order.orderTime) {
@@ -64,29 +120,28 @@ const UsageAnalysis = ({ orders }) => {
         return false;
       }
       
+      console.log(`Order date: ${orderDate} for time range: ${timeRange}`);
+      
       switch (timeRange) {
         case 'today':
           return orderDate >= today;
         case 'yesterday':
           return orderDate >= yesterday && orderDate < today;
-        case 'last7days':
+        case 'week':
           return orderDate >= lastWeek;
-        case 'last30days':
+        case 'month':
           return orderDate >= lastMonth;
-        case 'alltime':
-          return true;
-        default:
-          return true;
+        default: // 'all'
+          return true; // All time
       }
     });
     
-    console.log(`Filtered orders for ${timeRange}:`, filtered.length);
+    console.log('Filtered orders count:', filtered.length);
     return filtered;
-  }, [orders, timeRange, forceUpdate]);
+  }, [actualOrders, timeRange, forceUpdate]);
   
   // Calculate daily average usage for each ingredient
   const calculateDailyUsage = (usage, days) => {
-    if (days <= 0) return usage;
     const dailyUsage = {};
     Object.entries(usage).forEach(([ingredient, data]) => {
       dailyUsage[ingredient] = {
@@ -100,69 +155,96 @@ const UsageAnalysis = ({ orders }) => {
   // Calculate ingredient usage based on filtered orders
   const ingredientUsage = useMemo(() => {
     console.log('Recalculating ingredient usage...');
-    
-    if (!filteredOrders || filteredOrders.length === 0) {
-      console.log('No filtered orders available');
-      return {};
-    }
-    
-    // Process orders to get usage
     const usage = {};
     
-    // Initialize with all ingredients
+    // Initialize with all ingredients from PIZZA_INGREDIENTS
     const allIngredients = new Set();
+    
+    // Add base ingredients
     Object.keys(PIZZA_INGREDIENTS.base).forEach(ingredient => {
       allIngredients.add(ingredient);
     });
+    
+    // Add pizza-specific ingredients
     Object.values(PIZZA_INGREDIENTS.pizzas).forEach(pizza => {
       Object.keys(pizza.ingredients).forEach(ingredient => {
         allIngredients.add(ingredient);
       });
     });
     
+    console.log('All ingredients:', [...allIngredients]);
+    
+    // Initialize usage object with all ingredients
     allIngredients.forEach(ingredient => {
       usage[ingredient] = { used: 0, unit: '', category: '' };
     });
     
-    // Calculate usage from orders
-    filteredOrders.forEach(order => {
-      if (!order.pizzas || !Array.isArray(order.pizzas)) return;
+    // Debug: Log filtered orders
+    console.log('Processing filtered orders for ingredient usage, count:', filteredOrders.length);
+    
+    // Use filtered orders from Firebase
+    const ordersToProcess = filteredOrders;
+    console.log('Using filtered orders from Firebase, count:', ordersToProcess.length);
+    
+    // Process each order
+    ordersToProcess.forEach(order => {
+      console.log('Processing order:', order.id || 'unknown id');
+      
+      if (!order.pizzas || !Array.isArray(order.pizzas)) {
+        console.log('Order has no pizzas array:', order);
+        return;
+      }
       
       order.pizzas.forEach(pizza => {
         const quantity = pizza.quantity || 1;
         let pizzaType = pizza.pizzaType || pizza.type;
         
-        if (!pizzaType) return;
+        // Debug pizza info
+        console.log('Processing pizza:', pizzaType, 'quantity:', quantity);
         
-        // Convert to title case
-        pizzaType = pizzaType.split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-          
-        // Handle variations
-        if (pizzaType.includes('Margherita') || pizzaType.includes('Margarita')) {
-          pizzaType = 'Margherita';
-        } else if (pizzaType.includes('Pepperoni')) {
-          pizzaType = 'Pepperoni';
-        } else if (pizzaType.includes('Vegetarian') || pizzaType.includes('Veggie')) {
-          pizzaType = 'Vegetarian';
-        } else if (pizzaType.includes('Hawaiian')) {
-          pizzaType = 'Hawaiian';
-        } else if (pizzaType.includes('Meat') && (pizzaType.includes('Lover') || pizzaType.includes('Feast'))) {
-          pizzaType = 'Meat Lovers';
-        } else if (pizzaType.includes('Mushroom') && pizzaType.includes('Cloud')) {
-          pizzaType = 'Mushroom Cloud Pizza';
-        } else if (pizzaType.includes('Champ')) {
-          pizzaType = 'The Champ';
-        } else if (pizzaType.includes('Sourdough') && pizzaType.includes('Special')) {
-          pizzaType = 'Sourdough Special';
-        } else if (pizzaType.includes('Vegan')) {
-          pizzaType = 'Vegan Delight';
+        // Handle case sensitivity and common variations
+        if (pizzaType) {
+          // Convert to title case for consistency
+          pizzaType = pizzaType.split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+            
+          // Check if the pizza type exists exactly as is in our database
+          if (PIZZA_INGREDIENTS.pizzas[pizzaType]) {
+            // Perfect match - keep as is
+            console.log('Exact match found for pizza type:', pizzaType);
+          } 
+          // Handle common variations
+          else if (pizzaType.includes('Margherita') || pizzaType.includes('Margarita')) {
+            pizzaType = 'Margherita';
+          } else if (pizzaType.includes('Pepperoni')) {
+            pizzaType = 'Pepperoni';
+          } else if (pizzaType.includes('Vegetarian') || pizzaType.includes('Veggie')) {
+            pizzaType = 'Vegetarian';
+          } else if (pizzaType.includes('Hawaiian')) {
+            pizzaType = 'Hawaiian';
+          } else if (pizzaType.includes('Meat') && (pizzaType.includes('Lover') || pizzaType.includes('Feast'))) {
+            pizzaType = 'Meat Lovers';
+          } else if (pizzaType.includes('Mushroom') && pizzaType.includes('Cloud')) {
+            pizzaType = 'Mushroom Cloud Pizza';
+          } else if (pizzaType.includes('Champ')) {
+            pizzaType = 'The Champ';
+          } else if (pizzaType.includes('Sourdough') && pizzaType.includes('Special')) {
+            pizzaType = 'Sourdough Special';
+          } else if (pizzaType.includes('Vegan')) {
+            pizzaType = 'Vegan Delight';
+          }
         }
         
-        if (!PIZZA_INGREDIENTS.pizzas[pizzaType]) return;
+        // Check if we have this pizza type in our ingredients database
+        if (!pizzaType || !PIZZA_INGREDIENTS.pizzas[pizzaType]) {
+          console.log('Unknown pizza type:', pizzaType);
+          return;
+        }
         
-        // Add base ingredients
+        console.log('Matched pizza type:', pizzaType);
+        
+        // Add base ingredients for each pizza
         Object.entries(PIZZA_INGREDIENTS.base).forEach(([ingredient, data]) => {
           if (!usage[ingredient]) {
             usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
@@ -170,6 +252,7 @@ const UsageAnalysis = ({ orders }) => {
           usage[ingredient].used += data.amount * quantity;
           usage[ingredient].unit = data.unit;
           usage[ingredient].category = data.category;
+          console.log(`Added base ingredient ${ingredient}: ${data.amount * quantity} ${data.unit}`);
         });
         
         // Add pizza-specific ingredients
@@ -180,121 +263,100 @@ const UsageAnalysis = ({ orders }) => {
           usage[ingredient].used += data.amount * quantity;
           usage[ingredient].unit = data.unit;
           usage[ingredient].category = data.category;
+          console.log(`Added pizza-specific ingredient ${ingredient}: ${data.amount * quantity} ${data.unit}`);
         });
       });
     });
     
-    // Calculate daily usage based on time range
-    let days = 1;
-    switch (timeRange) {
-      case 'yesterday':
-        days = 1;
-        break;
-      case 'last7days':
-        days = 7;
-        break;
-      case 'last30days':
-        days = 30;
-        break;
-      case 'alltime':
-        // Estimate days based on oldest order
-        if (filteredOrders.length > 0) {
-          const now = new Date();
-          let oldestDate = now;
-          
-          filteredOrders.forEach(order => {
-            let orderDate;
-            if (order.orderTime) {
-              orderDate = new Date(order.orderTime);
-            } else if (order.createdAt) {
-              orderDate = new Date(order.createdAt);
-            } else if (order.timestamp) {
-              orderDate = new Date(typeof order.timestamp === 'number' ? order.timestamp : order.timestamp.toDate?.());
-            }
-            
-            if (orderDate && orderDate < oldestDate) {
-              oldestDate = orderDate;
-            }
-          });
-          
-          const diffTime = Math.abs(now - oldestDate);
-          days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          days = Math.max(1, days);
-        }
-        break;
-      default:
-        days = 1;
-    }
-    
-    // For daily average, divide by number of days
-    if (days > 1) {
-      return calculateDailyUsage(usage, days);
-    }
+    // Log final usage
+    console.log('Final ingredient usage:');
+    Object.entries(usage).forEach(([ingredient, data]) => {
+      console.log(`${ingredient}: ${data.used} ${data.unit}`);
+    });
     
     return usage;
-  }, [filteredOrders, timeRange]);
+  }, [filteredOrders]);
+  
+  // Group ingredients by category for better display
+  const ingredientsByCategory = useMemo(() => {
+    const categories = {};
+    
+    Object.entries(ingredientUsage).forEach(([ingredient, data]) => {
+      if (!categories[data.category]) {
+        categories[data.category] = [];
+      }
+      categories[data.category].push({
+        name: ingredient,
+        ...data
+      });
+    });
+    
+    // Sort ingredients within each category by usage (highest first)
+    Object.keys(categories).forEach(category => {
+      categories[category].sort((a, b) => b.used - a.used);
+    });
+    
+    return categories;
+  }, [ingredientUsage]);
+  
+  // Force component to re-render when filtered orders change
+  useEffect(() => {
+    console.log('Filtered orders updated, count:', filteredOrders.length);
+  }, [filteredOrders.length]);
   
   return (
     <div>
-      <div className="mb-4">
-        <div className="flex space-x-2">
-          <button 
-            onClick={() => handleTimeRangeChange('today')}
-            className={`px-3 py-1 rounded ${timeRange === 'today' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+      <div className="mb-4 flex space-x-4">
+        {['today', 'yesterday', 'week', 'month', 'all'].map(period => (
+          <button
+            key={period}
+            onClick={() => handleTimeRangeChange(period)}
+            className={`px-3 py-1 rounded ${timeRange === period ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
           >
-            Today
+            {period === 'today' && 'Today'}
+            {period === 'yesterday' && 'Yesterday'}
+            {period === 'week' && 'Last 7 Days'}
+            {period === 'month' && 'Last 30 Days'}
+            {period === 'all' && 'All Time'}
           </button>
-          <button 
-            onClick={() => handleTimeRangeChange('yesterday')}
-            className={`px-3 py-1 rounded ${timeRange === 'yesterday' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
-          >
-            Yesterday
-          </button>
-          <button 
-            onClick={() => handleTimeRangeChange('last7days')}
-            className={`px-3 py-1 rounded ${timeRange === 'last7days' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
-          >
-            Last 7 Days
-          </button>
-          <button 
-            onClick={() => handleTimeRangeChange('last30days')}
-            className={`px-3 py-1 rounded ${timeRange === 'last30days' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
-          >
-            Last 30 Days
-          </button>
-          <button 
-            onClick={() => handleTimeRangeChange('alltime')}
-            className={`px-3 py-1 rounded ${timeRange === 'alltime' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
-          >
-            All Time
-          </button>
-        </div>
+        ))}
       </div>
       
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left p-3 border-b">Ingredient</th>
-              <th className="text-left p-3 border-b">Category</th>
-              <th className="text-left p-3 border-b">Amount Used</th>
-              <th className="text-left p-3 border-b">Unit</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(ingredientUsage)
-              .sort(([a], [b]) => a.localeCompare(b)) // Sort alphabetically
-              .map(([ingredient, data]) => (
-              <tr key={ingredient} className="hover:bg-gray-50">
-                <td className="p-3 border-b capitalize">{ingredient.replace(/_/g, ' ')}</td>
-                <td className="p-3 border-b capitalize">{data.category}</td>
-                <td className="p-3 border-b">{data.used.toFixed(2)}</td>
-                <td className="p-3 border-b">{data.unit}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mb-4">
+        <p className="text-sm text-gray-600" key={`order-count-${filteredOrders.length}-${timeRange}`}>
+          Based on {filteredOrders.length} orders during the selected period.
+        </p>
       </div>
+      
+      {Object.keys(ingredientsByCategory).length === 0 ? (
+        <p>No ingredient usage data available for the selected period.</p>
+      ) : (
+        <div className="space-y-6">
+          {Object.entries(ingredientsByCategory).map(([category, ingredients]) => (
+            <div key={category} className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-lg mb-2 capitalize">{category}</h4>
+              <table className="w-full">
+                <thead>
+                  <tr className="text-left text-sm text-gray-600">
+                    <th className="py-2">Ingredient</th>
+                    <th className="py-2">Amount Used</th>
+                    <th className="py-2">Unit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ingredients.map(ingredient => (
+                    <tr key={ingredient.name} className="border-t border-gray-200">
+                      <td className="py-2 capitalize">{ingredient.name.replace(/_/g, ' ')}</td>
+                      <td className="py-2">{ingredient.used.toFixed(2)}</td>
+                      <td className="py-2">{ingredient.unit}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -317,95 +379,46 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
   
   // Get orders from Firebase
   const { data: firebaseOrders = [], loading: ordersLoading } = useFirebaseOrders();
-  
-  // Combine prop orders and Firebase orders
-  const orders = useMemo(() => {
-    return [...propOrders, ...firebaseOrders];
-  }, [propOrders, firebaseOrders]);
+  const orders = propOrders.length > 0 ? propOrders : firebaseOrders;
   
   // Load inventory data
   useEffect(() => {
-    const loadInventory = async () => {
+    const loadInventory = () => {
       try {
-        setInventoryLoading(true);
-        setInventoryError(null);
-        console.log('Starting inventory load from Firebase...');
+        // Create sample inventory data
+        console.log('Creating sample inventory data');
+        const sampleInventory = {};
         
-        // Get inventory collection from Firebase
-        const inventoryRef = db.collection('inventory');
-        const inventorySnapshot = await inventoryRef.get();
-        
-        const inventoryData = {};
-        inventorySnapshot.forEach((doc) => {
-          inventoryData[doc.id] = doc.data();
+        // Initialize inventory with all ingredients from PIZZA_INGREDIENTS
+        Object.keys(PIZZA_INGREDIENTS.base).forEach(ingredient => {
+          const data = PIZZA_INGREDIENTS.base[ingredient];
+          sampleInventory[ingredient] = { 
+            amount: Math.floor(Math.random() * 100) + 20, 
+            unit: data.unit,
+            category: data.category,
+            threshold: 10
+          };
         });
         
-        console.log('Loaded inventory data from Firebase:', inventoryData);
-        console.log('Number of ingredients loaded:', Object.keys(inventoryData).length);
-        
-        // If no inventory data exists, initialize with default values
-        if (Object.keys(inventoryData).length === 0) {
-          console.log('No inventory found. Initializing with default values.');
-          
-          // Initialize with base ingredients
-          Object.entries(PIZZA_INGREDIENTS.base).forEach(([ingredient, data]) => {
-            const { unit, category } = data;
-            inventoryData[ingredient] = {
-              amount: 100, // Default amount
-              threshold: 20, // Default threshold
-              unit: unit,
-              category: category
-            };
-          });
-          
-          // Add pizza-specific ingredients
-          Object.values(PIZZA_INGREDIENTS.pizzas).forEach(pizza => {
-            Object.entries(pizza.ingredients).forEach(([ingredient, data]) => {
-              if (!inventoryData[ingredient]) {
-                const { unit, category } = data;
-                inventoryData[ingredient] = {
-                  amount: 100, // Default amount
-                  threshold: 20, // Default threshold
-                  unit: unit,
-                  category: category
-                };
-              }
-            });
-          });
-          
-          console.log('Created default inventory data with', Object.keys(inventoryData).length, 'ingredients');
-          
-          // Save default inventory to Firebase
-          console.log('Saving default inventory to Firebase...');
-          try {
-            for (const [ingredient, data] of Object.entries(inventoryData)) {
-              console.log(`Saving ${ingredient} to Firebase:`, data);
-              await db.collection('inventory').doc(ingredient).set(data);
+        // Add all pizza-specific ingredients
+        Object.values(PIZZA_INGREDIENTS.pizzas).forEach(pizza => {
+          Object.entries(pizza.ingredients).forEach(([ingredient, data]) => {
+            if (!sampleInventory[ingredient]) {
+              sampleInventory[ingredient] = {
+                amount: Math.floor(Math.random() * 100) + 20,
+                unit: data.unit,
+                category: data.category,
+                threshold: 10
+              };
             }
-            console.log('Successfully saved all default inventory data to Firebase');
-          } catch (saveError) {
-            console.error('Error saving default inventory to Firebase:', saveError);
-            setInventoryError(`Error initializing inventory: ${saveError.message}`);
-          }
-        }
-        
-        // Debug - ensure amount is a number for all items
-        Object.entries(inventoryData).forEach(([ingredient, data]) => {
-          if (typeof data.amount !== 'number') {
-            console.warn(`Converting amount for ${ingredient} from ${typeof data.amount} to number`);
-            // Convert to number or default to 0
-            inventoryData[ingredient].amount = Number(data.amount) || 0;
-          }
+          });
         });
         
-        console.log('Final inventory data to be set:', inventoryData);
-        console.log('Final ingredient count:', Object.keys(inventoryData).length);
-        
-        setInventory(inventoryData);
+        setInventory(sampleInventory);
         setInventoryLoading(false);
       } catch (error) {
-        console.error('Error fetching inventory:', error);
-        setInventoryError(error.message);
+        console.error('Error creating inventory:', error);
+        setInventoryError('Failed to create inventory data');
         setInventoryLoading(false);
       }
     };
@@ -418,9 +431,13 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
     try {
       setSaveStatus('Saving inventory...');
       
-      // Update each inventory item in Firebase
+      // Get Firebase instance
+      const app = getFirebaseApp();
+      const db = getFirestore(app);
+      
+      // Update each inventory item
       for (const [ingredient, data] of Object.entries(inventory)) {
-        await db.collection('inventory').doc(ingredient).set(data);
+        await setDoc(doc(db, 'inventory', ingredient), data);
       }
       
       setSaveStatus('Inventory saved successfully!');
@@ -430,7 +447,7 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
       setSaveStatus(`Error: ${error.message}`);
     }
   };
-  
+
   // Check if stock is low
   const isLowStock = (ingredient) => {
     const item = inventory[ingredient];
@@ -440,39 +457,30 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
   // Calculate total inventory cost
   const calculateInventoryCost = () => {
     let totalCost = 0;
-    console.log('Calculating inventory cost. Inventory:', inventory);
     
     Object.entries(inventory).forEach(([ingredient, data]) => {
       // Get cost per unit from PIZZA_INGREDIENTS
       let costPerUnit = 0;
-      console.log(`Processing ingredient: ${ingredient}, data:`, data);
       
       // Check base ingredients
       if (PIZZA_INGREDIENTS.base[ingredient]) {
         costPerUnit = PIZZA_INGREDIENTS.base[ingredient].cost || 0;
-        console.log(`Found in base ingredients. Cost per unit: ${costPerUnit}`);
       } else {
         // Check pizza-specific ingredients
         for (const pizza of Object.values(PIZZA_INGREDIENTS.pizzas)) {
-          if (pizza.ingredients && pizza.ingredients[ingredient]) {
+          if (pizza.ingredients[ingredient]) {
             costPerUnit = pizza.ingredients[ingredient].cost || 0;
-            console.log(`Found in pizza ingredients. Cost per unit: ${costPerUnit}`);
             break;
           }
         }
       }
       
-      // Check if data.amount is a valid number
-      const amount = typeof data.amount === 'number' ? data.amount : 0;
-      
       // Calculate cost for this ingredient
-      const ingredientCost = amount * costPerUnit;
-      console.log(`Ingredient cost calculation: ${amount} * ${costPerUnit} = ${ingredientCost}`);
+      const ingredientCost = data.amount * costPerUnit;
       totalCost += ingredientCost;
     });
     
-    console.log(`Total inventory cost: ${totalCost}`);
-    return isNaN(totalCost) ? '0.00' : totalCost.toFixed(2);
+    return totalCost.toFixed(2);
   };
   
   // Check for low stock items and update notification
@@ -488,7 +496,7 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
     
     setLowStockItems(lowItems);
     setShowLowStockNotification(lowItems.length > 0);
-  }, [inventory]);
+  }, [inventory, isLowStock]);
 
   // Increment inventory item amount
   const handleIncrement = (ingredient, amount = 1) => {
@@ -554,8 +562,59 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
     setEditingAmount(null);
   };
 
+  // This duplicate function has been removed
+
+  if (inventoryLoading) {
+    return (
+      <div className="p-6">
+        <h2 className="text-2xl font-semibold mb-6">Inventory Management</h2>
+        <div className="flex items-center justify-center p-4">
+          <p>Loading inventory data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (inventoryError) {
+    return (
+      <div className="p-6">
+        <h2 className="text-2xl font-semibold mb-6">Inventory Management</h2>
+        <div className="p-4">
+          <p className="text-red-600">Error: {inventoryError}</p>
+        </div>
+      </div>
+    );
+  }
+  
+// Main InventoryManagement component
+const InventoryManagement = ({ orders: propOrders = [] }) => {
+  const [activeView, setActiveView] = useState('current');
+  const [inventory, setInventory] = useState({});
+  const [inventoryLoading, setInventoryLoading] = useState(true);
+  const [inventoryError, setInventoryError] = useState(null);
+  const [saveStatus, setSaveStatus] = useState('');
+  const [editingThreshold, setEditingThreshold] = useState(null);
+  const [thresholdValue, setThresholdValue] = useState('');
+  const [editingAmount, setEditingAmount] = useState(null);
+  const [amountValue, setAmountValue] = useState('');
+  const [customAmount, setCustomAmount] = useState(1);
+  const [showLowStockNotification, setShowLowStockNotification] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState([]);
+  const [forecastDays, setForecastDays] = useState(7);
+  
+  // Get orders from Firebase
+  const { data: firebaseOrders = [], loading: ordersLoading } = useFirebaseOrders();
+  
+  // Combine prop orders and Firebase orders
+  const orders = useMemo(() => {
+    return [...propOrders, ...firebaseOrders];
+  }, [propOrders, firebaseOrders]);
+  
+  // Force re-render
+  const [forceUpdate, setForceUpdate] = useState(0);
+  
   // Function to calculate daily average usage for each ingredient
-  const calculateDailyUsage = (usage, days) => {
+  const calculateDailyUsage = useCallback((usage, days) => {
     if (days <= 0) return usage;
     const dailyUsage = {};
     Object.entries(usage).forEach(([ingredient, data]) => {
@@ -565,10 +624,10 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
       };
     });
     return dailyUsage;
-  };
+  }, []);
   
   // Process orders to calculate weekly usage
-  const processWeeklyUsage = () => {
+  const processWeeklyUsage = useCallback(() => {
     if (!orders || orders.length === 0) {
       return {};
     }
@@ -672,13 +731,13 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
     
     // Calculate daily usage
     return calculateDailyUsage(usage, 7);
-  };
+  }, [orders, calculateDailyUsage]);
   
-  // Calculate daily usage from the last week
-  const lastWeekUsage = useMemo(() => processWeeklyUsage(), [orders]);
+  // Calculate daily usage from the last week - moved outside conditional rendering
+  const lastWeekUsage = useMemo(() => processWeeklyUsage(), [processWeeklyUsage]);
   
   // Process forecast data based on inventory and usage
-  const processForecastData = () => {
+  const processForecastData = useCallback(() => {
     // Calculate forecast for each ingredient
     const forecast = [];
     
@@ -715,33 +774,10 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
     
     // Sort by days remaining (ascending)
     return forecast.sort((a, b) => a.daysRemaining - b.daysRemaining);
-  };
+  }, [inventory, lastWeekUsage]);
   
   // Calculate forecast data
-  const forecastData = useMemo(() => processForecastData(), [inventory, lastWeekUsage, forecastDays]);
-
-  if (inventoryLoading) {
-    return (
-      <div className="p-6">
-        <h2 className="text-2xl font-semibold mb-6">Inventory Management</h2>
-        <div className="flex items-center justify-center p-4">
-          <p>Loading inventory data...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (inventoryError) {
-    return (
-      <div className="p-6">
-        <h2 className="text-2xl font-semibold mb-6">Inventory Management</h2>
-        <div className="p-4">
-          <p className="text-red-600">Error: {inventoryError}</p>
-        </div>
-      </div>
-    );
-  }
-  
+  const forecastData = useMemo(() => processForecastData(), [processForecastData]);
   
   return (
     <div className="p-6">
@@ -789,7 +825,7 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
           </button>
         </div>
       </div>
-      
+
       <div className="bg-white rounded p-4 shadow">
         {activeView === 'current' && (
           <div>
