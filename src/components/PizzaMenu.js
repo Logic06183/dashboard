@@ -76,6 +76,30 @@ const PizzaMenu = ({ onOrderClick }) => {
       rating: "96% (60)"
     },
     {
+      id: 'vegetarian-special',
+      name: "Vegetarian Special",
+      price: 169.00,
+      description: "A vegetarian masterpiece loaded with grilled zucchini, roasted bell peppers, sun-dried tomatoes, black olives, feta cheese, and fresh basil on our signature sourdough base.",
+      ingredients: ["Grilled zucchini", "Roasted bell peppers", "Sun-dried tomatoes", "Black olives", "Feta cheese", "Fresh basil"],
+      rating: "93% (84)"
+    },
+    {
+      id: 'build-your-own',
+      name: "Build Your Own",
+      price: 159.00,
+      description: "Creativity meets appetite! Choose your favorite toppings and create your perfect pizza on our signature sourdough base. Price may vary based on selections.",
+      ingredients: ["Your choice of toppings", "Cheese", "Sauce", "Sourdough base"],
+      rating: "98% (142)"
+    },
+    {
+      id: 'owen',
+      name: "Owen",
+      price: 169.00,
+      description: "Named after our beloved local regular, this pizza features smoky pulled pork, caramelized onions, sweet corn, and a drizzle of BBQ sauce on our famous sourdough base.",
+      ingredients: ["Pulled pork", "Caramelized onions", "Sweet corn", "BBQ sauce", "Mozzarella"],
+      rating: "95% (76)"
+    },
+    {
       id: 'poppas',
       name: "Poppa's Pizza",
       price: 179.00,
