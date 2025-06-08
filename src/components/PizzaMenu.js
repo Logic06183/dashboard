@@ -5,139 +5,122 @@ const PizzaMenu = ({ onOrderClick }) => {
   const menuItems = [
     {
       id: 'the-champ',
-      name: "The Champ Pizza",
-      price: 179.00,
-      description: "Pepperoni is the most popular ingredient on pizza, worldwide. We love it! Simply done with spring onions and parmesan to champion the pepperoni.",
-      ingredients: ["Pepperoni", "Spring onions", "Parmesan", "Mozzarella"],
-      rating: "92% (420)"
-    },
-    {
-      id: 'pig-paradise',
-      name: "Pig in Paradise",
-      price: 169.00,
-      description: "This little piggy went to Hawaii. Sourdough, sauce, cheese, bacon and caramelised pineapple.",
-      ingredients: ["Bacon", "Caramelised pineapple", "Cheese", "Pizza sauce"],
-      rating: "96% (321)"
-    },
-    {
-      id: 'margie',
-      name: "Margie Pizza",
-      price: 149.00,
-      description: "John Dough's Margherita made with a sourdough base, tomato pizza sauce, fresh mozzarella & basil. Simply delicious!",
-      ingredients: ["Tomato sauce", "Fresh mozzarella", "Basil", "Sourdough base"],
-      rating: "91% (391)"
-    },
-    {
-      id: 'mushroom-cloud',
-      name: "Mushroom Cloud Pizza",
-      price: 174.00,
-      description: "A troop of mushrooms amongst clouds of goat's cheese, showered in sunflower seeds and sprinkled with chilli-infused olive oil. We also add garlic and caramelised onions for good measure.",
-      ingredients: ["Mushrooms", "Goat's cheese", "Sunflower seeds", "Chilli-infused olive oil", "Garlic", "Caramelised onions"],
-      rating: "98% (180)"
-    },
-    {
-      id: 'spud',
-      name: "Spud Pizza",
-      price: 149.00,
-      description: "A crispy potato topping on a sourdough pizza base with rosemary, salt flakes, caramelised onion and finished off with chilli oil and parmesan. The only thing better than sourdough, is potato slices on sourdough.",
-      ingredients: ["Potato", "Rosemary", "Salt flakes", "Caramelised onion", "Chilli oil", "Parmesan"],
-      rating: "93% (124)"
-    },
-    {
-      id: 'mish-mash',
-      name: "Mish-Mash Pizza",
-      price: 192.00,
-      description: "Parma ham, fig preserve, goat's cheese & rocket, enough said.",
-      ingredients: ["Parma ham", "Fig preserve", "Goat's cheese", "Rocket"],
-      rating: "97% (172)"
+      name: "THE CHAMP",
+      price: 159.00,
+      description: "Pepperoni, sourdough, red onion, parmesan and victory.",
+      ingredients: ["Pepperoni", "Sourdough", "Red onion", "Parmesan"]
     },
     {
       id: 'lekkerizza',
-      name: "Lekker'izza",
-      price: 194.00,
-      description: "Bacon, chorizo sausage, peppadews, feta and fresh herbs.",
-      ingredients: ["Bacon", "Chorizo sausage", "Peppadews", "Feta", "Fresh herbs"],
-      rating: "96% (89)"
-    },
-    {
-      id: 'sunshine-margherita',
-      name: "Sunshine Margherita",
-      price: 149.00,
-      description: "A basil pesto sauce topped with ricotta cheese, sundried tomatoes and fresh basil. Pizza Bianca (no sauce).",
-      ingredients: ["Basil pesto", "Ricotta cheese", "Sundried tomatoes", "Fresh basil"],
-      rating: "78% (41)"
-    },
-    {
-      id: 'vegan-harvest',
-      name: "Vegan Harvest Pizza",
-      price: 189.00,
-      description: "A delectable combination of tangy sourdough crust topped with a medley of earthy mushrooms, tender baby marrow, Kalamata olives, zesty sundried tomatoes, and fragrant seasonal fresh herbs. Finished with a creamy dollop of hummus and a drizzle of rich olive oil. A vegan delight!",
-      ingredients: ["Mushrooms", "Baby marrow", "Kalamata olives", "Sundried tomatoes", "Seasonal herbs", "Hummus", "Olive oil"],
-      rating: "96% (60)"
-    },
-    {
-      id: 'vegetarian-special',
-      name: "Vegetarian Special",
-      price: 169.00,
-      description: "A vegetarian masterpiece loaded with grilled zucchini, roasted bell peppers, sun-dried tomatoes, black olives, feta cheese, and fresh basil on our signature sourdough base.",
-      ingredients: ["Grilled zucchini", "Roasted bell peppers", "Sun-dried tomatoes", "Black olives", "Feta cheese", "Fresh basil"],
-      rating: "93% (84)"
-    },
-    {
-      id: 'build-your-own',
-      name: "Build Your Own",
-      price: 159.00,
-      description: "Creativity meets appetite! Choose your favorite toppings and create your perfect pizza on our signature sourdough base. Price may vary based on selections.",
-      ingredients: ["Your choice of toppings", "Cheese", "Sauce", "Sourdough base"],
-      rating: "98% (142)"
-    },
-    {
-      id: 'owen',
-      name: "Owen",
-      price: 169.00,
-      description: "Named after our beloved local regular, this pizza features smoky pulled pork, caramelized onions, sweet corn, and a drizzle of BBQ sauce on our famous sourdough base.",
-      ingredients: ["Pulled pork", "Caramelized onions", "Sweet corn", "BBQ sauce", "Mozzarella"],
-      rating: "95% (76)"
-    },
-    {
-      id: 'poppas',
-      name: "Poppa's Pizza",
-      price: 179.00,
-      description: "Love it - anchovies, olives, fresh mozzarella and basil.",
-      ingredients: ["Anchovies", "Olives", "Fresh mozzarella", "Basil"],
-      rating: "91% (71)"
-    },
-    {
-      id: 'zesty-zucchini',
-      name: "The Zesty Zucchini",
-      price: 149.00,
-      description: "A Pizza Bianca (no pizza sauce) showcasing the star ingredient of courgette, with tangy blue cheese adding zest and flavor, and parmesan and fresh mozzarella balancing it all out.",
-      ingredients: ["Courgette", "Blue cheese", "Parmesan", "Fresh mozzarella"],
-      rating: "92% (27)"
+      name: "LEKKER'IZZA",
+      price: 185.00,
+      description: "Salt-cured anchovies, olives, creamy mozzarella, and aromatic basil for a timeless Italian taste.",
+      ingredients: ["Salt-cured anchovies", "Olives", "Creamy mozzarella", "Aromatic basil"]
     },
     {
       id: 'chick-tick-boom',
-      name: "Chick Tick Boom",
-      price: 172.00,
+      name: "CHICK TICK BOOM!",
+      price: 155.00,
       description: "Spicy chicken tikka, sweet peppadews, and a burst of fresh coriander dance on a delicious crust.",
-      ingredients: ["Chicken tikka", "Peppadews", "Fresh coriander"],
-      rating: "89% (47)"
+      ingredients: ["Spicy chicken tikka", "Sweet peppadews", "Fresh coriander"]
+    },
+    {
+      id: 'mish-mash',
+      name: "MISH-MASH",
+      price: 149.00,
+      description: "Parma ham, fig jam, oh damn! Finished with goat's cheese and rocket.",
+      ingredients: ["Parma ham", "Fig jam", "Goat's cheese", "Rocket"]
+    },
+    {
+      id: 'poppas-pig-paradise',
+      name: "POPPA'S PIG IN PARADISE",
+      price: 169.00,
+      description: "Sourdough piled high with cheese, bacon, and caramelised pineapple. We're not saying it's a Hawaiian pizza, but...",
+      ingredients: ["Cheese", "Bacon", "Caramelised pineapple", "Sourdough base"]
+    },
+    {
+      id: 'meat-lovers',
+      name: "MEAT LOVERS MAYHEM",
+      price: 149.00,
+      description: "Bacon, pepperoni, biltong, peppadews, shredded mozzarella, red onion, Mrs Ball's Chutney and feta. Bring your defibrillator.",
+      ingredients: ["Bacon", "Pepperoni", "Biltong", "Peppadews", "Shredded mozzarella", "Red onion", "Mrs Ball's Chutney", "Feta"]
     },
     {
       id: 'artichoke-ham',
-      name: "Artichoke & Ham",
-      price: 172.00,
-      description: "Sourdough elevates the classics! Tangy sauce, melty cheese, ham, mushrooms, artichoke leaves & olives for a taste sensation.",
-      ingredients: ["Ham", "Mushrooms", "Artichoke leaves", "Olives", "Cheese", "Tangy sauce"],
-      rating: "93% (66)"
+      name: "ARTICHOKE & HAM",
+      price: 159.00,
+      description: "Shredded mozzarella, ham, mushrooms, artichoke & olives. A taste sensation, or just dinner, depending on your standards.",
+      ingredients: ["Shredded mozzarella", "Ham", "Mushrooms", "Artichoke", "Olives"]
     },
     {
-      id: 'janes-dough',
-      name: "Jane's Dough",
-      price: 109.00,
-      description: "Fragrant sourdough focaccia, dimpled and golden, bursts with garlicky goodness, salty olives, and vibrant seasonal herbs. A touch of olive oil completes this symphony of flavours.",
-      ingredients: ["Sourdough focaccia", "Garlic", "Olives", "Seasonal herbs", "Olive oil"],
-      rating: "75% (8)"
+      id: 'glaze-of-glory',
+      name: "GLAZE OF GLORY",
+      price: 149.00,
+      description: "Balsamic glaze drizzled over bacon, feta and red onion. You stay classy, Joburg.",
+      ingredients: ["Bacon", "Feta", "Red onion", "Balsamic glaze"]
+    },
+    {
+      id: 'mediterranean',
+      name: "MEDITERRANEAN",
+      price: 165.00,
+      description: "Earthy mushrooms, zucchini, olives, sun-dried tomatoes, herbs, hummus, olive oil. (Cheese? Never heard of it.)",
+      ingredients: ["Mushrooms", "Zucchini", "Olives", "Sun-dried tomatoes", "Herbs", "Hummus", "Olive oil"]
+    },
+    {
+      id: 'margie',
+      name: "MARGIE",
+      price: 119.00,
+      description: "The original Neapolitan classic with fresh mozzarella and fragrant basil.",
+      ingredients: ["Fresh mozzarella", "Fragrant basil", "Tomato sauce"]
+    },
+    {
+      id: 'owen',
+      name: "OWEN!",
+      price: 159.00,
+      description: "For little pizza lovers! Sauce and lots of shredded cheese on our sourdough rolled base that's good for the gut.",
+      ingredients: ["Pizza sauce", "Shredded cheese", "Sourdough base"]
+    },
+    {
+      id: 'caprese',
+      name: "CAPRESE",
+      price: 155.00,
+      description: "Fresh mozzarella, vibrant tomatoes, balsamic glaze and basil pesto on our signature crust.",
+      ingredients: ["Fresh mozzarella", "Vibrant tomatoes", "Balsamic glaze", "Basil pesto"]
+    },
+    {
+      id: 'vegan-harvest',
+      name: "VEGAN HARVEST",
+      price: 99.00,
+      description: "A plant-based paradise with earthy mushrooms, zucchini, olives, sun-dried tomatoes, herbs, hummus, and olive oil.",
+      ingredients: ["Mushrooms", "Zucchini", "Olives", "Sun-dried tomatoes", "Herbs", "Hummus", "Olive oil"]
+    },
+    {
+      id: 'spud',
+      name: "SPUD",
+      price: 129.00,
+      description: "A white pizza with a heart-warming hug of crispy potatoes, caramelised onion, fragrant rosemary, a kiss of chilli oil, and a dusting of Parmesan",
+      ingredients: ["Crispy potatoes", "Caramelised onion", "Rosemary", "Chilli oil", "Parmesan"]
+    },
+    {
+      id: 'greek-goddess',
+      name: "GREEK GODDESS",
+      price: 129.00,
+      description: "Zucchini, sun-dried tomatoes, olives, feta, garlic, and shredded mozzarella. By Hera, this is a pizza fit for Olympus!",
+      ingredients: ["Zucchini", "Sun-dried tomatoes", "Olives", "Feta", "Garlic", "Shredded mozzarella"]
+    },
+    {
+      id: 'quattro-formaggi',
+      name: "QUATTRO FORMAGGI",
+      price: 159.00,
+      description: "A four-cheese feast of shredded mozzarella, provolone, blue cheese, and Parmesan, plus red onion and fig jam. Great pizza, questionable date choice.",
+      ingredients: ["Shredded mozzarella", "Provolone", "Blue cheese", "Parmesan", "Red onion", "Fig jam"]
+    },
+    {
+      id: 'mushroom-cloud',
+      name: "MUSHROOM CLOUD",
+      price: 159.00,
+      description: "Farm-fresh mushrooms, caramelised onions, goat cheese, Banhoek chilli oil and a sprinkle of sunflower seeds.",
+      ingredients: ["Farm-fresh mushrooms", "Caramelised onions", "Goat cheese", "Banhoek chilli oil", "Sunflower seeds"]
     }
   ];
 
@@ -149,9 +132,6 @@ const PizzaMenu = ({ onOrderClick }) => {
             <div className="flex justify-between items-start">
               <h3 className="text-lg font-semibold">{item.name}</h3>
               <span className="text-green-600 font-medium">R{item.price.toFixed(2)}</span>
-            </div>
-            <div className="mt-1">
-              <span className="text-sm text-amber-500">{item.rating}</span>
             </div>
             <p className="text-gray-600 mt-2">{item.description}</p>
             <div className="mt-2">

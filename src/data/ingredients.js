@@ -43,10 +43,30 @@ export const PIZZA_INGREDIENTS = {
     'Mushroom Cloud Pizza': {
       ingredients: {
         'mushrooms': { unit: 'g', amount: 80, category: 'vegetable', cost: 0.16 },
-        'truffle_oil': { unit: 'ml', amount: 15, category: 'oil', cost: 0.75 },
-        'garlic': { unit: 'g', amount: 10, category: 'vegetable', cost: 0.05 },
-        'thyme': { unit: 'g', amount: 5, category: 'herb', cost: 0.10 },
-        'parmesan_cheese': { unit: 'g', amount: 30, category: 'cheese', cost: 0.18 }
+        'caramelised_onions': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.08 },
+        'goat_cheese': { unit: 'g', amount: 50, category: 'cheese', cost: 0.25 },
+        'banhoek_chilli_oil': { unit: 'ml', amount: 10, category: 'oil', cost: 0.20 },
+        'sunflower_seeds': { unit: 'g', amount: 15, category: 'topping', cost: 0.10 }
+      }
+    },
+    'Greek Goddess': {
+      ingredients: {
+        'zucchini': { unit: 'g', amount: 60, category: 'vegetable', cost: 0.10 },
+        'sun_dried_tomatoes': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.18 },
+        'olives': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.15 },
+        'feta_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.22 },
+        'garlic': { unit: 'g', amount: 8, category: 'vegetable', cost: 0.05 },
+        'mozzarella_cheese': { unit: 'g', amount: 60, category: 'cheese', cost: 0.15 }
+      }
+    },
+    'Quattro Formaggi': {
+      ingredients: {
+        'mozzarella_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.10 },
+        'provolone_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.20 },
+        'blue_cheese': { unit: 'g', amount: 30, category: 'cheese', cost: 0.25 },
+        'parmesan_cheese': { unit: 'g', amount: 25, category: 'cheese', cost: 0.18 },
+        'red_onion': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.05 },
+        'fig_jam': { unit: 'ml', amount: 15, category: 'sauce', cost: 0.20 }
       }
     },
     'The Champ': {
@@ -63,6 +83,15 @@ export const PIZZA_INGREDIENTS = {
         'arugula': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.12 },
         'cherry_tomatoes': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.10 },
         'balsamic_glaze': { unit: 'ml', amount: 15, category: 'sauce', cost: 0.15 }
+      }
+    },
+    'Spud Pizza': {
+      ingredients: {
+        'potato': { unit: 'g', amount: 80, category: 'vegetable', cost: 0.08 },
+        'onion': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.04 },
+        'rosemary': { unit: 'g', amount: 5, category: 'herb', cost: 0.10 },
+        'chilli_oil': { unit: 'ml', amount: 10, category: 'oil', cost: 0.15 },
+        'parmesan_cheese': { unit: 'g', amount: 25, category: 'cheese', cost: 0.18 }
       }
     },
     'Vegan Delight': {

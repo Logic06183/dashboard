@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
@@ -48,23 +49,23 @@ function getFirebaseInstance() {
 
 // Pizza menu from John Dough's
 const pizzaMenu = [
-  { id: 'margie', name: 'Margie Pizza', price: 149.00 },
-  { id: 'the-champ', name: 'The Champ Pizza', price: 179.00 },
-  { id: 'pig-paradise', name: 'Pig in Paradise', price: 169.00 },
-  { id: 'mushroom-cloud', name: 'Mushroom Cloud Pizza', price: 174.00 },
-  { id: 'spud', name: 'Spud Pizza', price: 149.00 },
-  { id: 'mish-mash', name: 'Mish-Mash Pizza', price: 192.00 },
-  { id: 'lekkerizza', name: 'Lekker\'izza', price: 194.00 },
-  { id: 'sunshine-margherita', name: 'Sunshine Margherita', price: 149.00 },
-  { id: 'vegan-harvest', name: 'Vegan Harvest Pizza', price: 189.00 },
-  { id: 'vegetarian-special', name: 'Vegetarian Special', price: 169.00 },
-  { id: 'build-your-own', name: 'Build Your Own', price: 159.00 },
-  { id: 'owen', name: 'Owen', price: 169.00 },
-  { id: 'poppas', name: 'Poppa\'s Pizza', price: 179.00 },
-  { id: 'zesty-zucchini', name: 'The Zesty Zucchini', price: 149.00 },
-  { id: 'chick-tick-boom', name: 'Chick Tick Boom', price: 172.00 },
-  { id: 'artichoke-ham', name: 'Artichoke & Ham', price: 172.00 },
-  { id: 'janes-dough', name: 'Jane\'s Dough', price: 109.00 }
+  { id: 'the-champ', name: 'THE CHAMP', price: 159.00 },
+  { id: 'lekkerizza', name: 'LEKKER\'IZZA', price: 185.00 },
+  { id: 'chick-tick-boom', name: 'CHICK TICK BOOM!', price: 155.00 },
+  { id: 'mish-mash', name: 'MISH-MASH', price: 149.00 },
+  { id: 'poppas-pig-paradise', name: 'POPPA\'S PIG IN PARADISE', price: 169.00 },
+  { id: 'meat-lovers', name: 'MEAT LOVERS MAYHEM', price: 149.00 },
+  { id: 'artichoke-ham', name: 'ARTICHOKE & HAM', price: 159.00 },
+  { id: 'glaze-of-glory', name: 'GLAZE OF GLORY', price: 149.00 },
+  { id: 'mediterranean', name: 'MEDITERRANEAN', price: 165.00 },
+  { id: 'margie', name: 'MARGIE', price: 119.00 },
+  { id: 'owen', name: 'OWEN!', price: 159.00 },
+  { id: 'caprese', name: 'CAPRESE', price: 155.00 },
+  { id: 'vegan-harvest', name: 'VEGAN HARVEST', price: 99.00 },
+  { id: 'spud', name: 'SPUD', price: 129.00 },
+  { id: 'greek-goddess', name: 'GREEK GODDESS', price: 129.00 },
+  { id: 'quattro-formaggi', name: 'QUATTRO FORMAGGI', price: 159.00 },
+  { id: 'mushroom-cloud', name: 'MUSHROOM CLOUD', price: 159.00 }
 ];
 
 // This form is simplified and uses a direct Firebase approach
