@@ -3,6 +3,22 @@ import React from 'react';
 
 const PizzaMenu = ({ onOrderClick }) => {
   const menuItems = [
+    // Non-pizza items
+    {
+      id: 'dough-balls',
+      name: "DOUGH BALLS",
+      price: 45.00,
+      description: "Six freshly baked sourdough balls, served with garlic butter.",
+      ingredients: ["Sourdough", "Garlic butter"]
+    },
+    {
+      id: 'stretched-base',
+      name: "STRETCHED BASE WITH SAUCE",
+      price: 55.00,
+      description: "Stretched sourdough base with our signature tomato sauce.",
+      ingredients: ["Sourdough", "Tomato sauce"]
+    },
+    // Pizza items
     {
       id: 'the-champ',
       name: "THE CHAMP",

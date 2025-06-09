@@ -49,6 +49,10 @@ function getFirebaseInstance() {
 
 // Pizza menu from John Dough's
 const pizzaMenu = [
+  // Non-pizza items
+  { id: 'dough-balls', name: 'DOUGH BALLS', price: 45.00 },
+  { id: 'stretched-base', name: 'STRETCHED BASE WITH SAUCE', price: 55.00 },
+  // Pizza items
   { id: 'the-champ', name: 'THE CHAMP', price: 159.00 },
   { id: 'lekkerizza', name: 'LEKKER\'IZZA', price: 185.00 },
   { id: 'chick-tick-boom', name: 'CHICK TICK BOOM!', price: 155.00 },
