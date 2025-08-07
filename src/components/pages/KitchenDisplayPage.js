@@ -4,12 +4,13 @@ import TableKitchenDisplay from '../TableKitchenDisplay';
 const KitchenDisplayPage = ({ isLoading, onStatusChange, onPizzaStatusChange, onArchiveOrder }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
   
-  // DISABLED: No automatic time updates to prevent auto-refreshes
+  // Enable automatic time updates for real-time display
   useEffect(() => {
-    console.log('Automatic time updates disabled in Kitchen Display');
-    // Set initial time but don't update automatically
-    setCurrentTime(new Date());
-    return () => {};
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => clearInterval(timer);
   }, []);
   
   return (

@@ -45,14 +45,7 @@ export const PIZZA_INGREDIENTS = {
         'pineapple': { unit: 'g', amount: 50, category: 'fruit', cost: 0.08 }
       }
     },
-    'Meat Lovers': {
-      ingredients: {
-        'pepperoni': { unit: 'g', amount: 30, category: 'meat', cost: 0.09 },
-        'sausage': { unit: 'g', amount: 30, category: 'meat', cost: 0.12 },
-        'bacon': { unit: 'g', amount: 30, category: 'meat', cost: 0.14 },
-        'ham': { unit: 'g', amount: 30, category: 'meat', cost: 0.09 }
-      }
-    },
+
     // John Dough's specialty pizzas
     'Mushroom Cloud Pizza': {
       ingredients: {
@@ -63,16 +56,7 @@ export const PIZZA_INGREDIENTS = {
         'sunflower_seeds': { unit: 'g', amount: 15, category: 'topping', cost: 0.10 }
       }
     },
-    'Greek Goddess': {
-      ingredients: {
-        'zucchini': { unit: 'g', amount: 60, category: 'vegetable', cost: 0.10 },
-        'sun_dried_tomatoes': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.18 },
-        'olives': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.15 },
-        'feta_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.22 },
-        'garlic': { unit: 'g', amount: 8, category: 'vegetable', cost: 0.05 },
-        'mozzarella_cheese': { unit: 'g', amount: 60, category: 'cheese', cost: 0.15 }
-      }
-    },
+
     'Quattro Formaggi': {
       ingredients: {
         'mozzarella_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.10 },
@@ -148,24 +132,24 @@ export const PIZZA_INGREDIENTS = {
         'rocket': { unit: 'g', amount: 15, category: 'vegetable', cost: 0.10 }
       }
     },
-    'POPPA\'S PIG IN PARADISE': {
-      ingredients: {
-        'cheese': { unit: 'g', amount: 70, category: 'cheese', cost: 0.16 },
-        'bacon': { unit: 'g', amount: 50, category: 'meat', cost: 0.22 },
-        'caramelised_pineapple': { unit: 'g', amount: 50, category: 'fruit', cost: 0.15 },
-        'sourdough_base': { unit: 'ball', amount: 1, category: 'dough', cost: 0.25 }
-      }
-    },
-    'MEAT LOVERS MAYHEM': {
+    'POPPA\'S': {
       ingredients: {
         'bacon': { unit: 'g', amount: 40, category: 'meat', cost: 0.20 },
         'pepperoni': { unit: 'g', amount: 40, category: 'meat', cost: 0.18 },
         'biltong': { unit: 'g', amount: 30, category: 'meat', cost: 0.35 },
         'peppadews': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.12 },
         'mozzarella': { unit: 'g', amount: 60, category: 'cheese', cost: 0.15 },
-        'red_onion': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.05 },
+        'red_onion': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.05 },
         'chutney': { unit: 'ml', amount: 15, category: 'sauce', cost: 0.10 },
         'feta': { unit: 'g', amount: 30, category: 'cheese', cost: 0.18 }
+      }
+    },
+    'PIG IN PARADISE': {
+      ingredients: {
+        'cheese': { unit: 'g', amount: 70, category: 'cheese', cost: 0.16 },
+        'bacon': { unit: 'g', amount: 50, category: 'meat', cost: 0.22 },
+        'caramelised_pineapple': { unit: 'g', amount: 50, category: 'fruit', cost: 0.15 },
+        'sourdough_base': { unit: 'ball', amount: 1, category: 'dough', cost: 0.25 }
       }
     },
     'ARTICHOKE & HAM': {
@@ -227,6 +211,23 @@ export const PIZZA_INGREDIENTS = {
         'herbs': { unit: 'g', amount: 5, category: 'herb', cost: 0.10 },
         'hummus': { unit: 'ml', amount: 30, category: 'sauce', cost: 0.16 },
         'olive_oil': { unit: 'ml', amount: 15, category: 'oil', cost: 0.08 }
+      }
+    },
+    'VEG SPECIAL': {
+      ingredients: {
+        'mushrooms': { unit: 'g', amount: 50, category: 'vegetable', cost: 0.15 },
+        'bell_peppers': { unit: 'g', amount: 45, category: 'vegetable', cost: 0.12 },
+        'olives': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.15 },
+        'cherry_tomatoes': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.10 },
+        'caramelized_onions': { unit: 'g', amount: 35, category: 'vegetable', cost: 0.08 },
+        'mozzarella': { unit: 'g', amount: 120, category: 'cheese', cost: 0.25 }
+      }
+    },
+    'BUILD YOUR OWN': {
+      ingredients: {
+        'sourdough_dough': { unit: 'ball', amount: 1, category: 'dough', cost: 12.50 },
+        'tomato_sauce': { unit: 'ml', amount: 80, category: 'sauce', cost: 0.05 },
+        'mozzarella_cheese': { unit: 'g', amount: 100, category: 'cheese', cost: 0.12 }
       }
     }
   }

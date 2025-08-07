@@ -272,6 +272,15 @@ const OrdersPage = () => {
                             </span>
                           </div>
                         ))}
+                        {order.coldDrinks && order.coldDrinks.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            {order.coldDrinks.map((drink, idx) => (
+                              <div key={idx} className="text-sm text-blue-600">
+                                {drink.quantity}x {drink.drinkType}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -376,6 +385,16 @@ const OrdersPage = () => {
                         )}
                       </div>
                     ))}
+                    {order.coldDrinks && order.coldDrinks.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
+                        {order.coldDrinks.map((drink, idx) => (
+                          <div key={idx} className="text-sm text-blue-600">
+                            {drink.quantity}x {drink.drinkType}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -477,6 +496,16 @@ const OrdersPage = () => {
                         )}
                       </div>
                     ))}
+                    {order.coldDrinks && order.coldDrinks.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
+                        {order.coldDrinks.map((drink, idx) => (
+                          <div key={idx} className="text-sm text-blue-600">
+                            {drink.quantity}x {drink.drinkType}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -578,6 +607,16 @@ const OrdersPage = () => {
                         )}
                       </div>
                     ))}
+                    {order.coldDrinks && order.coldDrinks.length > 0 && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
+                        {order.coldDrinks.map((drink, idx) => (
+                          <div key={idx} className="text-sm text-blue-600">
+                            {drink.quantity}x {drink.drinkType}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -652,8 +691,21 @@ const OrdersPage = () => {
                             {pizza.specialInstructions && (
                               <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
                             )}
+                            {pizza.specialInstructions && (
+                              <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
+                            )}
                           </div>
                         ))}
+                        {order.coldDrinks && order.coldDrinks.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
+                            {order.coldDrinks.map((drink, idx) => (
+                              <div key={idx} className="text-sm text-blue-600">
+                                {drink.quantity}x {drink.drinkType}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

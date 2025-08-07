@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+ import React, { useState, useEffect } from 'react';
 // Import Firebase directly to avoid any service abstraction issues
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
@@ -113,7 +113,7 @@ const CustomOrderForm = ({ onSubmit, setShowOrderForm }) => {
   ];
 
   // Platform/delivery service options
-  const platformOptions = ['Window', 'Uber Eats', 'Mr D Food', 'Bolt Food', 'Customer Pickup', 'Other'];
+  const platformOptions = ['Window', 'Uber Eats', 'Mr D Food', 'Bolt Food', 'Customer Pickup', 'Staff', 'Other'];
 
   // Pizza prices (in Rands)
   const pizzaPrices = {

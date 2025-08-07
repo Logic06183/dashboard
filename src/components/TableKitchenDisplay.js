@@ -7,6 +7,16 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
   const { data: firebaseOrders, loading, error } = useFirebaseOrders();
   const [displayOrders, setDisplayOrders] = useState([]);
   const [highlightedOrders, setHighlightedOrders] = useState({});
+  const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Update current time every second for real-time countdown
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
   
   // Load highlighted orders from localStorage on component mount
   useEffect(() => {
@@ -50,13 +60,34 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
   const getTimeStatus = (dueTime) => {
     if (!dueTime) return 'Unknown';
     
-    const now = new Date();
     const due = new Date(dueTime);
-    const diffMinutes = Math.floor((due - now) / (1000 * 60));
+    const diffMinutes = Math.floor((due - currentTime) / (1000 * 60));
     
     if (diffMinutes < -15) return 'Very Late';
     if (diffMinutes < 0) return 'Late';
     return 'On Time';
+  };
+  
+  // Get time remaining string
+  const getTimeRemaining = (dueTime) => {
+    if (!dueTime) return 'Unknown';
+    
+    const due = new Date(dueTime);
+    const diffMs = due - currentTime;
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+    
+    if (diffMinutes < -60) {
+      const hours = Math.abs(Math.floor(diffMinutes / 60));
+      const mins = Math.abs(diffMinutes % 60);
+      return `(${hours}h ${mins}m late)`;
+    } else if (diffMinutes < 0) {
+      return `(${Math.abs(diffMinutes)}m late)`;
+    } else if (diffMinutes === 0) {
+      return `(${diffSeconds}s)`;
+    } else {
+      return `(${diffMinutes}m ${diffSeconds}s)`;
+    }
   };
 
   // Get CSS class for time status
@@ -101,6 +132,7 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
         orderTime: new Date(order.orderTime || order.createdAt),
         dueTime: new Date(order.dueTime || order.orderTime || order.createdAt),
         timeStatus: getTimeStatus(order.dueTime),
+        timeRemaining: getTimeRemaining(order.dueTime),
         orderTimeFormatted: format(new Date(order.orderTime || order.createdAt), 'HH:mm'),
         dueTimeFormatted: format(new Date(order.dueTime || order.orderTime || order.createdAt), 'HH:mm')
       }))
@@ -118,7 +150,7 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
         // Sort by due time
         return a.dueTime - b.dueTime;
       });
-  }, [displayOrders]);
+  }, [displayOrders, currentTime]); // Re-sort when currentTime changes
 
   // Handle pizza completion status changes
   const handlePizzaStatusChange = async (orderId, pizzaIndex, isCompleted) => {
@@ -255,7 +287,7 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
                       <div className="flex items-center">
                         <span className="font-bold text-yellow-800">{order.customerName || 'Walk-in Customer'}</span>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1">Due: {order.dueTimeFormatted}</div>
+                      <div className="text-xs text-gray-500 mt-1">Due: {order.dueTimeFormatted} {order.timeRemaining}</div>
                       <div className="text-xs text-gray-500">Platform: {order.platform || 'Walk-in'}</div>
                       <div className="mt-2">
                         {order.pizzas?.map((pizza, idx) => (
@@ -265,6 +297,15 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
                             </span>
                           </div>
                         ))}
+                        {order.coldDrinks && order.coldDrinks.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-yellow-300">
+                            {order.coldDrinks.map((drink, idx) => (
+                              <div key={idx} className="text-sm text-blue-600">
+                                {drink.quantity}x {drink.drinkType}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <button 
@@ -306,7 +347,8 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
             <th className="px-4 py-3 border-b font-bold">Customer</th>
             <th className="px-4 py-3 border-b font-bold">Platform</th>
             <th className="px-4 py-3 border-b font-bold">Pizzas</th>
-            <th className="px-4 py-3 border-b font-bold">Extra Toppings</th>
+            <th className="px-4 py-3 border-b font-bold">Cold Drinks</th>
+            <th className="px-4 py-3 border-b font-bold">Special Instructions</th>
             <th className="px-4 py-3 border-b font-bold">Prep Time</th>
             <th className="px-4 py-3 border-b font-bold">Status</th>
             <th className="px-4 py-3 border-b font-bold">Done</th>
@@ -329,9 +371,14 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
               >
                 <td className="px-4 py-3 text-sm font-bold text-red-600">{order.dueTimeFormatted}</td>
                 <td className="px-4 py-3 text-sm">
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTimeStatusClass(order.timeStatus)}`}>
-                    {order.timeStatus}
-                  </span>
+                  <div className="flex flex-col items-start">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getTimeStatusClass(order.timeStatus)}`}>
+                      {order.timeStatus}
+                    </span>
+                    <span className="text-xs font-mono mt-1 text-gray-600">
+                      {order.timeRemaining}
+                    </span>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-sm font-medium">
                   <div className="font-semibold">{order.customerName || 'Walk-in Customer'}</div>
@@ -386,11 +433,24 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
                   })}
                 </td>
                 <td className="px-4 py-3 text-sm">
+                  {order.coldDrinks && order.coldDrinks.length > 0 ? (
+                    <div className="space-y-1">
+                      {order.coldDrinks.map((drink, idx) => (
+                        <div key={idx} className="text-blue-600">
+                          {drink.quantity}x {drink.drinkType}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-sm">
                   {order.specialInstructions ? (
                     <div className="text-orange-600">{order.specialInstructions}</div>
                   ) : '-'}
                 </td>
-                <td className="px-4 py-3 text-sm font-medium">{order.prepTime ? `${order.prepTime} min` : '-'}</td>
+                <td className="px-4 py-3 text-sm font-medium">{order.prepTimeMinutes ? `${order.prepTimeMinutes} min` : order.prepTime ? `${order.prepTime} min` : '-'}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`}>
                     {isCompleted ? 'Completed' : order.timeStatus}

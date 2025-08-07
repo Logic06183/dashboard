@@ -48,18 +48,18 @@ const PizzaMenu = ({ onOrderClick }) => {
       ingredients: ["Parma ham", "Fig jam", "Goat's cheese", "Rocket"]
     },
     {
-      id: 'poppas-pig-paradise',
-      name: "POPPA'S PIG IN PARADISE",
+      id: 'poppas',
+      name: "POPPA'S",
       price: 169.00,
-      description: "Sourdough piled high with cheese, bacon, and caramelised pineapple. We're not saying it's a Hawaiian pizza, but...",
-      ingredients: ["Cheese", "Bacon", "Caramelised pineapple", "Sourdough base"]
+      description: "Bacon, pepperoni, biltong, peppadews, shredded mozzarella, red onion, Mrs Ball's Chutney and feta.",
+      ingredients: ["Bacon", "Pepperoni", "Biltong", "Peppadews", "Shredded mozzarella", "Red onion", "Mrs Ball's Chutney", "Feta"]
     },
     {
-      id: 'meat-lovers',
-      name: "MEAT LOVERS MAYHEM",
-      price: 149.00,
-      description: "Bacon, pepperoni, biltong, peppadews, shredded mozzarella, red onion, Mrs Ball's Chutney and feta. Bring your defibrillator.",
-      ingredients: ["Bacon", "Pepperoni", "Biltong", "Peppadews", "Shredded mozzarella", "Red onion", "Mrs Ball's Chutney", "Feta"]
+      id: 'pig-in-paradise',
+      name: "PIG IN PARADISE",
+      price: 159.00,
+      description: "Sourdough piled high with cheese, bacon, and caramelised pineapple. We're not saying it's a Hawaiian pizza, but...",
+      ingredients: ["Cheese", "Bacon", "Caramelised pineapple", "Sourdough base"]
     },
     {
       id: 'artichoke-ham',
@@ -106,9 +106,23 @@ const PizzaMenu = ({ onOrderClick }) => {
     {
       id: 'vegan-harvest',
       name: "VEGAN HARVEST",
-      price: 99.00,
-      description: "A plant-based paradise with earthy mushrooms, zucchini, olives, sun-dried tomatoes, herbs, hummus, and olive oil.",
+      price: 165.00,
+      description: "Plant based feast with assorted vegetables, herbs and vegan cheese",
       ingredients: ["Mushrooms", "Zucchini", "Olives", "Sun-dried tomatoes", "Herbs", "Hummus", "Olive oil"]
+    },
+    {
+      id: 'veg-special',
+      name: "VEG SPECIAL",
+      price: 145.00,
+      description: "Fresh mushrooms, bell peppers, olives, cherry tomatoes, and caramelized onions with extra mozzarella.",
+      ingredients: ["Mushrooms", "Bell peppers", "Olives", "Cherry tomatoes", "Caramelized onions", "Mozzarella"]
+    },
+    {
+      id: 'build-your-own',
+      name: "BUILD YOUR OWN",
+      price: 130.00,
+      description: "Start with a base and add your favorite toppings (additional charges per topping).",
+      ingredients: ["Sourdough", "Tomato sauce", "Mozzarella"]
     },
     {
       id: 'spud',

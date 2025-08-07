@@ -47,29 +47,45 @@ function getFirebaseInstance() {
   }
 }
 
-// Pizza menu from John Dough's
+// Pizza menu from John Dough's with updated prices
 const pizzaMenu = [
   // Non-pizza items
-  { id: 'dough-balls', name: 'DOUGH BALLS', price: 45.00 },
-  { id: 'stretched-base', name: 'STRETCHED BASE WITH SAUCE', price: 55.00 },
-  // Pizza items
-  { id: 'the-champ', name: 'THE CHAMP', price: 159.00 },
-  { id: 'lekkerizza', name: 'LEKKER\'IZZA', price: 185.00 },
-  { id: 'chick-tick-boom', name: 'CHICK TICK BOOM!', price: 155.00 },
-  { id: 'mish-mash', name: 'MISH-MASH', price: 149.00 },
-  { id: 'poppas-pig-paradise', name: 'POPPA\'S PIG IN PARADISE', price: 169.00 },
-  { id: 'meat-lovers', name: 'MEAT LOVERS MAYHEM', price: 149.00 },
-  { id: 'artichoke-ham', name: 'ARTICHOKE & HAM', price: 159.00 },
-  { id: 'glaze-of-glory', name: 'GLAZE OF GLORY', price: 149.00 },
-  { id: 'mediterranean', name: 'MEDITERRANEAN', price: 165.00 },
-  { id: 'margie', name: 'MARGIE', price: 119.00 },
-  { id: 'owen', name: 'OWEN!', price: 159.00 },
-  { id: 'caprese', name: 'CAPRESE', price: 155.00 },
-  { id: 'vegan-harvest', name: 'VEGAN HARVEST', price: 99.00 },
-  { id: 'spud', name: 'SPUD', price: 129.00 },
-  { id: 'greek-goddess', name: 'GREEK GODDESS', price: 129.00 },
-  { id: 'quattro-formaggi', name: 'QUATTRO FORMAGGI', price: 159.00 },
-  { id: 'mushroom-cloud', name: 'MUSHROOM CLOUD', price: 159.00 }
+  { id: 'dough-balls', name: 'DOUGH BALLS', price: 48.00 },
+  { id: 'stretched-base', name: 'STRETCHED BASE WITH SAUCE', price: 58.00 },
+  // Pizza items - updated prices
+  { id: 'the-champ', name: 'THE CHAMP', price: 169.00 },
+  { id: 'lekkerizza', name: 'LEKKER\'IZZA', price: 195.00 },
+  { id: 'chick-tick-boom', name: 'CHICK TICK BOOM!', price: 165.00 },
+  { id: 'mish-mash', name: 'MISH-MASH', price: 159.00 },
+  { id: 'poppas', name: 'POPPA\'S', price: 179.00 },
+  { id: 'pig-in-paradise', name: 'PIG IN PARADISE', price: 169.00 },
+  { id: 'artichoke-ham', name: 'ARTICHOKE & HAM', price: 169.00 },
+  { id: 'glaze-of-glory', name: 'GLAZE OF GLORY', price: 159.00 },
+  { id: 'mediterranean', name: 'MEDITERRANEAN', price: 175.00 },
+  { id: 'margie', name: 'MARGIE', price: 125.00 },
+  { id: 'owen', name: 'OWEN!', price: 169.00 },
+  { id: 'caprese', name: 'CAPRESE', price: 165.00 },
+  { id: 'vegan-harvest', name: 'VEGAN HARVEST', price: 175.00 },
+  { id: 'veg-special', name: 'VEG SPECIAL', price: 155.00 },
+  { id: 'build-your-own', name: 'BUILD YOUR OWN', price: 139.00 },
+  { id: 'spud', name: 'SPUD', price: 139.00 },
+  { id: 'greek-goddess', name: 'GREEK GODDESS', price: 139.00 },
+  { id: 'quattro-formaggi', name: 'QUATTRO FORMAGGI', price: 169.00 },
+  { id: 'mushroom-cloud', name: 'MUSHROOM CLOUD', price: 169.00 }
+];
+
+// Cold drinks menu
+const coldDrinksMenu = [
+  { id: 'coke', name: 'Coca-Cola 330ml', price: 25.00 },
+  { id: 'coke-zero', name: 'Coke Zero 330ml', price: 25.00 },
+  { id: 'sprite', name: 'Sprite 330ml', price: 25.00 },
+  { id: 'fanta-orange', name: 'Fanta Orange 330ml', price: 25.00 },
+  { id: 'appletizer', name: 'Appletizer 330ml', price: 28.00 },
+  { id: 'grapetizer', name: 'Grapetizer 330ml', price: 28.00 },
+  { id: 'water-still', name: 'Still Water 500ml', price: 18.00 },
+  { id: 'water-sparkling', name: 'Sparkling Water 500ml', price: 20.00 },
+  { id: 'ice-tea', name: 'Ice Tea 500ml', price: 28.00 },
+  { id: 'red-bull', name: 'Red Bull 250ml', price: 35.00 }
 ];
 
 // This form is simplified and uses a direct Firebase approach
@@ -85,11 +101,14 @@ const FirebaseDirectForm = ({ onClose }) => {
   const [pizzaItems, setPizzaItems] = useState([
     {
       id: Date.now(), // unique ID for this pizza item
-      pizzaType: 'Margie Pizza',
+      pizzaType: 'MARGIE',
       quantity: 1,
       specialInstructions: ''
     }
   ]);
+  
+  // State for managing cold drinks
+  const [coldDrinks, setColdDrinks] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState({ status: 'idle', message: '' });
   const [db, setDb] = useState(null);
@@ -152,11 +171,44 @@ const FirebaseDirectForm = ({ onClose }) => {
       ...prev,
       {
         id: Date.now(),
-        pizzaType: 'Margie Pizza',
+        pizzaType: 'MARGIE',
         quantity: 1,
         specialInstructions: ''
       }
     ]);
+  };
+  
+  // Add a cold drink to the order
+  const addColdDrink = () => {
+    setColdDrinks(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        drinkType: coldDrinksMenu[0].name,
+        quantity: 1
+      }
+    ]);
+  };
+  
+  // Remove a cold drink from the order
+  const removeColdDrink = (drinkId) => {
+    setColdDrinks(prev => prev.filter(item => item.id !== drinkId));
+  };
+  
+  // Handle changes to a cold drink item
+  const handleColdDrinkChange = (e, drinkId) => {
+    const { name, value } = e.target;
+    setColdDrinks(prevItems => {
+      return prevItems.map(item => {
+        if (item.id === drinkId) {
+          return {
+            ...item,
+            [name]: name === 'quantity' ? parseInt(value, 10) : value
+          };
+        }
+        return item;
+      });
+    });
   };
   
   // Remove a pizza from the order
@@ -168,10 +220,17 @@ const FirebaseDirectForm = ({ onClose }) => {
   
   // Calculate total price of the order
   const calculateTotalPrice = () => {
-    return pizzaItems.reduce((total, item) => {
-      const pizza = pizzaMenu.find(p => p.name === item.pizzaType) || { price: 149 };
+    const pizzaTotal = pizzaItems.reduce((total, item) => {
+      const pizza = pizzaMenu.find(p => p.name === item.pizzaType) || { price: 159 };
       return total + (pizza.price * item.quantity);
     }, 0);
+    
+    const drinksTotal = coldDrinks.reduce((total, item) => {
+      const drink = coldDrinksMenu.find(d => d.name === item.drinkType) || { price: 25 };
+      return total + (drink.price * item.quantity);
+    }, 0);
+    
+    return pizzaTotal + drinksTotal;
   };
   
   // Check if any pizza has special instructions
@@ -214,6 +273,16 @@ const FirebaseDirectForm = ({ onClose }) => {
       // Generate an array of cooking statuses matching the number of pizzas
       const cookedStatuses = Array(processedPizzaItems.length).fill(false);
       
+      // Process cold drinks
+      const processedColdDrinks = coldDrinks.map(item => {
+        const drink = coldDrinksMenu.find(d => d.name === item.drinkType) || { price: 25 };
+        return {
+          drinkType: item.drinkType,
+          quantity: item.quantity,
+          totalPrice: drink.price * item.quantity
+        };
+      });
+      
       // Calculate total price
       const totalPrice = calculateTotalPrice();
       
@@ -221,6 +290,7 @@ const FirebaseDirectForm = ({ onClose }) => {
       const order = {
         customerName: orderData.customerName || 'Anonymous',
         pizzas: processedPizzaItems,
+        coldDrinks: processedColdDrinks,
         platform: orderData.platform,
         status: 'pending',
         orderTime: new Date().toISOString(),
@@ -260,10 +330,11 @@ const FirebaseDirectForm = ({ onClose }) => {
       // Reset to a single pizza item
       setPizzaItems([{
         id: Date.now(),
-        pizzaType: 'Margie Pizza',
+        pizzaType: 'MARGIE',
         quantity: 1,
         specialInstructions: ''
       }]);
+      setColdDrinks([]);
     } catch (error) {
       console.error('Error submitting order:', error);
       console.error('Error details:', {
@@ -339,6 +410,7 @@ const FirebaseDirectForm = ({ onClose }) => {
                 <option value="Mr D Food">Mr D Food</option>
                 <option value="Bolt Food">Bolt Food</option>
                 <option value="Customer Pickup">Customer Pickup</option>
+                <option value="Staff">Staff</option>
                 <option value="Other">Other</option>
               </select>
             </div>
@@ -440,10 +512,79 @@ const FirebaseDirectForm = ({ onClose }) => {
             </button>
           </div>
           
+          <div className="border-t pt-4">
+            <h3 className="font-medium text-gray-800 mb-2">Cold Drinks</h3>
+            
+            {coldDrinks.map((drink, index) => (
+              <div key={drink.id} className="bg-blue-50 p-3 rounded-lg mb-3 border border-blue-200">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium text-blue-800">Drink #{index+1}</h4>
+                  <button 
+                    type="button"
+                    onClick={() => removeColdDrink(drink.id)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Drink Type
+                    </label>
+                    <select
+                      name="drinkType"
+                      value={drink.drinkType}
+                      onChange={(e) => handleColdDrinkChange(e, drink.id)}
+                      className="w-full p-2 border border-gray-300 rounded"
+                      required
+                    >
+                      {coldDrinksMenu.map(d => (
+                        <option key={`${drink.id}-${d.id}`} value={d.name}>
+                          {d.name} (R{d.price.toFixed(2)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={drink.quantity}
+                      onChange={(e) => handleColdDrinkChange(e, drink.id)}
+                      min="1"
+                      max="10"
+                      className="w-full p-2 border border-gray-300 rounded"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addColdDrink}
+              className="mt-2 w-full py-2 px-4 border border-dashed border-blue-400 text-blue-600 rounded hover:bg-blue-50"
+            >
+              + Add Cold Drink
+            </button>
+          </div>
+          
           <div className="bg-gray-50 p-3 rounded-lg border">
             <h3 className="font-medium text-gray-800 mb-1">Order Summary</h3>
             <div className="text-sm text-gray-600 mb-2">
               {pizzaItems.reduce((total, item) => total + item.quantity, 0)} pizza(s), {pizzaItems.length} different type(s)
+              {coldDrinks.length > 0 && (
+                <span className="block">
+                  {coldDrinks.reduce((total, item) => total + item.quantity, 0)} drink(s), {coldDrinks.length} different type(s)
+                </span>
+              )}
             </div>
             <div className="font-bold text-lg">
               Total: R{calculateTotalPrice().toFixed(2)}
