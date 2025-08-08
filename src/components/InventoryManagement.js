@@ -340,6 +340,12 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
   const [showLowStockNotification, setShowLowStockNotification] = useState(false);
   const [lowStockItems, setLowStockItems] = useState([]);
   const [forecastDays, setForecastDays] = useState(7);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
+  const [bulkUpdateData, setBulkUpdateData] = useState({});
+  const [collapsedCategories, setCollapsedCategories] = useState(new Set());
+  const [stockHistory, setStockHistory] = useState([]);
   
   // Get orders from Firebase
   const { data: firebaseOrders = [], loading: ordersLoading } = useFirebaseOrders();
@@ -348,6 +354,16 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
   const orders = useMemo(() => {
     return [...propOrders, ...firebaseOrders];
   }, [propOrders, firebaseOrders]);
+  
+  // Load stock history from localStorage
+  useEffect(() => {
+    try {
+      const savedHistory = JSON.parse(localStorage.getItem('stockHistory') || '[]');
+      setStockHistory(savedHistory);
+    } catch (error) {
+      console.error('Error loading stock history:', error);
+    }
+  }, []);
   
   // Load inventory data
   useEffect(() => {
@@ -544,22 +560,32 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
 
   // Increment inventory item amount
   const handleIncrement = (ingredient, amount = 1) => {
+    const oldAmount = inventory[ingredient]?.amount || 0;
+    const newAmount = oldAmount + amount;
+    
+    logStockChange(ingredient, oldAmount, newAmount, 'increment');
+    
     setInventory(prev => ({
       ...prev,
       [ingredient]: {
         ...prev[ingredient],
-        amount: (prev[ingredient]?.amount || 0) + amount
+        amount: newAmount
       }
     }));
   };
 
   // Decrement inventory item amount
   const handleDecrement = (ingredient, amount = 1) => {
+    const oldAmount = inventory[ingredient]?.amount || 0;
+    const newAmount = Math.max(0, oldAmount - amount);
+    
+    logStockChange(ingredient, oldAmount, newAmount, 'decrement');
+    
     setInventory(prev => ({
       ...prev,
       [ingredient]: {
         ...prev[ingredient],
-        amount: Math.max(0, (prev[ingredient]?.amount || 0) - amount)
+        amount: newAmount
       }
     }));
   };
@@ -595,6 +621,9 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
   const saveAmount = (ingredient) => {
     const amount = parseInt(amountValue, 10);
     if (!isNaN(amount) && amount >= 0) {
+      // Log stock change
+      logStockChange(ingredient, inventory[ingredient]?.amount || 0, amount, 'manual_update');
+      
       setInventory(prev => ({
         ...prev,
         [ingredient]: {
@@ -604,6 +633,114 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
       }));
     }
     setEditingAmount(null);
+  };
+  
+  // Log stock changes for history tracking
+  const logStockChange = (ingredient, oldAmount, newAmount, changeType, user = 'Team Member') => {
+    const change = {
+      ingredient,
+      oldAmount,
+      newAmount,
+      difference: newAmount - oldAmount,
+      changeType, // 'manual_update', 'increment', 'decrement', 'bulk_update', 'usage_deduction'
+      user,
+      timestamp: new Date().toISOString()
+    };
+    
+    setStockHistory(prev => [change, ...prev].slice(0, 100)); // Keep last 100 changes
+    
+    // Also save to localStorage for persistence
+    try {
+      const existingHistory = JSON.parse(localStorage.getItem('stockHistory') || '[]');
+      const updatedHistory = [change, ...existingHistory].slice(0, 100);
+      localStorage.setItem('stockHistory', JSON.stringify(updatedHistory));
+    } catch (error) {
+      console.error('Error saving stock history:', error);
+    }
+  };
+  
+  // Toggle category collapse
+  const toggleCategoryCollapse = (category) => {
+    setCollapsedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
+  
+  // Handle bulk update modal
+  const openBulkUpdateModal = () => {
+    // Initialize bulk update data with current amounts
+    const bulkData = {};
+    Object.entries(inventory).forEach(([ingredient, data]) => {
+      bulkData[ingredient] = {
+        currentAmount: data.amount,
+        newAmount: data.amount,
+        category: data.category,
+        unit: data.unit,
+        selected: false
+      };
+    });
+    setBulkUpdateData(bulkData);
+    setShowBulkUpdateModal(true);
+  };
+  
+  // Apply bulk updates
+  const applyBulkUpdates = () => {
+    const updatedInventory = { ...inventory };
+    let changesCount = 0;
+    
+    Object.entries(bulkUpdateData).forEach(([ingredient, data]) => {
+      if (data.selected && data.newAmount !== data.currentAmount) {
+        // Log the change
+        logStockChange(ingredient, data.currentAmount, data.newAmount, 'bulk_update');
+        
+        updatedInventory[ingredient] = {
+          ...updatedInventory[ingredient],
+          amount: data.newAmount
+        };
+        changesCount++;
+      }
+    });
+    
+    setInventory(updatedInventory);
+    setShowBulkUpdateModal(false);
+    
+    if (changesCount > 0) {
+      setSaveStatus(`Bulk update applied to ${changesCount} ingredients. Don't forget to save!`);
+      setTimeout(() => setSaveStatus(''), 5000);
+    }
+  };
+  
+  // Handle bulk update data changes
+  const updateBulkItem = (ingredient, field, value) => {
+    setBulkUpdateData(prev => ({
+      ...prev,
+      [ingredient]: {
+        ...prev[ingredient],
+        [field]: value
+      }
+    }));
+  };
+  
+  // Quick preset adjustments
+  const applyPresetAdjustment = (ingredient, adjustment) => {
+    const oldAmount = inventory[ingredient]?.amount || 0;
+    const newAmount = Math.max(0, oldAmount + adjustment);
+    
+    logStockChange(ingredient, oldAmount, newAmount, adjustment > 0 ? 'increment' : 'decrement');
+    
+    setInventory(prev => ({
+      ...prev,
+      [ingredient]: {
+        ...prev[ingredient],
+        amount: newAmount
+      }
+    }));
   };
 
   // Function to calculate daily average usage for each ingredient
@@ -806,6 +943,76 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
   
   // Calculate forecast data
   const forecastData = useMemo(() => processForecastData(), [inventory, lastWeekUsage, forecastDays]);
+  
+  // Helper function to get category emoji
+  const getCategoryEmoji = (category) => {
+    const emojis = {
+      dough: '🍞',
+      cheese: '🧀',
+      meat: '🍖',
+      vegetable: '🥬',
+      sauce: '🍅',
+      herb: '🌿',
+      oil: '🫒',
+      fruit: '🍍',
+      fish: '🌠',
+      beverage_ingredient: '🥤',
+      packaging: '📦',
+      beverage_finished: '🥤',
+      other: '🍽️'
+    };
+    return emojis[category] || '🍽️';
+  };
+  
+  // Group inventory by category
+  const inventoryByCategory = useMemo(() => {
+    const categories = {};
+    
+    Object.entries(inventory).forEach(([ingredient, data]) => {
+      const category = data.category || 'other';
+      if (!categories[category]) {
+        categories[category] = [];
+      }
+      categories[category].push({ name: ingredient, ...data });
+    });
+    
+    // Sort categories and ingredients within each category
+    Object.keys(categories).forEach(category => {
+      categories[category].sort((a, b) => a.name.localeCompare(b.name));
+    });
+    
+    return categories;
+  }, [inventory]);
+  
+  // Get unique categories for filter dropdown
+  const categories = useMemo(() => {
+    const cats = new Set(['all']);
+    Object.keys(inventory).forEach(ingredient => {
+      cats.add(inventory[ingredient].category || 'other');
+    });
+    return Array.from(cats).sort();
+  }, [inventory]);
+  
+  // Filter inventory items based on search term and category
+  const filteredInventory = useMemo(() => {
+    let filtered = Object.entries(inventory);
+    
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(([ingredient]) => 
+        ingredient.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(([ingredient, data]) => 
+        (data.category || 'other') === selectedCategory
+      );
+    }
+    
+    return filtered;
+  }, [inventory, searchTerm, selectedCategory]);
 
   if (inventoryLoading) {
     return (
@@ -855,30 +1062,43 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
       )}
       
       <div className="mb-6">
-        <div className="flex space-x-4">
+        {/* Mobile-friendly tab navigation */}
+        <div className="grid grid-cols-2 md:flex gap-2 md:space-x-4">
           <button
             onClick={() => setActiveView('current')}
-            className={`px-4 py-2 rounded ${activeView === 'current' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+            className={`px-3 py-2 rounded text-sm md:text-base font-medium transition-colors ${
+              activeView === 'current' ? 'bg-purple-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
           >
-            Current Stock
+            <span className="md:hidden">📋 Stock</span>
+            <span className="hidden md:inline">📋 Current Stock</span>
           </button>
           <button
             onClick={() => setActiveView('usage')}
-            className={`px-4 py-2 rounded ${activeView === 'usage' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+            className={`px-3 py-2 rounded text-sm md:text-base font-medium transition-colors ${
+              activeView === 'usage' ? 'bg-purple-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
           >
-            Usage Analysis
+            <span className="md:hidden">📈 Usage</span>
+            <span className="hidden md:inline">📈 Usage Analysis</span>
           </button>
           <button
             onClick={() => setActiveView('forecast')}
-            className={`px-4 py-2 rounded ${activeView === 'forecast' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+            className={`px-3 py-2 rounded text-sm md:text-base font-medium transition-colors ${
+              activeView === 'forecast' ? 'bg-purple-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
           >
-            Inventory Forecast
+            <span className="md:hidden">🔮 Forecast</span>
+            <span className="hidden md:inline">🔮 Inventory Forecast</span>
           </button>
           <button
             onClick={() => setActiveView('manager')}
-            className={`px-4 py-2 rounded ${activeView === 'manager' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+            className={`px-3 py-2 rounded text-sm md:text-base font-medium transition-colors ${
+              activeView === 'manager' ? 'bg-purple-600 text-white' : 'bg-gray-200 hover:bg-gray-300'
+            }`}
           >
-            Manager Dashboard
+            <span className="md:hidden">📄 Manager</span>
+            <span className="hidden md:inline">📄 Manager Dashboard</span>
           </button>
         </div>
       </div>
@@ -886,9 +1106,9 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
       <div className="bg-white rounded p-4 shadow">
         {activeView === 'current' && (
           <div>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
               <h3 className="font-semibold text-xl">Current Stock Levels</h3>
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center">
                   <label htmlFor="customAmount" className="mr-2 text-sm">Adjustment Amount:</label>
                   <input 
@@ -902,11 +1122,78 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
                   />
                 </div>
                 <button 
+                  onClick={openBulkUpdateModal}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  📦 Bulk Update
+                </button>
+                <button 
                   onClick={saveInventoryToFirebase}
                   className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition-colors"
                 >
-                  Save Inventory
+                  💾 Save Inventory
                 </button>
+              </div>
+            </div>
+            
+            {/* Search and Filter Controls - Mobile Optimized */}
+            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+              <div className="space-y-4">
+                <div>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search ingredients..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full px-4 py-3 text-base md:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Category:</label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    {categories.map(category => (
+                      <option key={category} value={category}>
+                        {category === 'all' ? '🍽️ All Categories' : 
+                         `${getCategoryEmoji(category)} ${category.charAt(0).toUpperCase() + category.slice(1)}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              {/* Quick Actions - Mobile Friendly */}
+              <div className="mt-4">
+                <span className="block text-sm font-medium text-gray-700 mb-2">Quick Filters:</span>
+                <div className="grid grid-cols-2 md:flex gap-2">
+                  <button
+                    onClick={() => setSelectedCategory('dough')}
+                    className="px-3 py-2 text-sm bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors font-medium"
+                  >
+                    🍞 Dough
+                  </button>
+                  <button
+                    onClick={() => setSelectedCategory('cheese')}
+                    className="px-3 py-2 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors font-medium"
+                  >
+                    🧀 Cheese
+                  </button>
+                  <button
+                    onClick={() => setSelectedCategory('meat')}
+                    className="px-3 py-2 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium"
+                  >
+                    🍖 Meat
+                  </button>
+                  <button
+                    onClick={() => setSelectedCategory('vegetable')}
+                    className="px-3 py-2 text-sm bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors font-medium"
+                  >
+                    🥬 Vegetables
+                  </button>
+                </div>
               </div>
             </div>
             
@@ -929,107 +1216,462 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
               </div>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="text-left p-3 border-b">Ingredient</th>
-                    <th className="text-left p-3 border-b">Category</th>
-                    <th className="text-left p-3 border-b">Current Amount</th>
-                    <th className="text-left p-3 border-b">Unit</th>
-                    <th className="text-left p-3 border-b">Low Stock Threshold</th>
-                    <th className="text-left p-3 border-b">Status</th>
-                    <th className="text-left p-3 border-b">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(inventory)
-                    .sort(([a], [b]) => a.localeCompare(b)) // Sort alphabetically
-                    .map(([ingredient, data]) => (
-                    <tr key={ingredient} className={isLowStock(ingredient) ? 'bg-red-50' : 'hover:bg-gray-50'}>
-                      <td className="p-3 border-b capitalize">{ingredient.replace(/_/g, ' ')}</td>
-                      <td className="p-3 border-b capitalize">{data.category}</td>
-                      <td className="p-3 border-b">
-                        {editingAmount === ingredient ? (
-                          <div className="flex items-center">
-                            <input 
-                              type="number" 
-                              value={amountValue} 
-                              onChange={(e) => setAmountValue(e.target.value)}
-                              className="border rounded px-2 py-1 w-20 text-center"
-                            />
-                            <button 
-                              onClick={() => saveAmount(ingredient)}
-                              className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-xs"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center">
-                            <span 
-                              className="cursor-pointer hover:text-blue-600"
-                              onClick={() => startEditingAmount(ingredient)}
-                            >
-                              {data.amount}
+            {/* Category-based Inventory Display */}
+            <div className="space-y-4">
+              {Object.entries(inventoryByCategory)
+                .filter(([category]) => selectedCategory === 'all' || selectedCategory === category)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([category, items]) => {
+                  const filteredItems = items.filter(item => 
+                    searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  );
+                  
+                  if (filteredItems.length === 0) return null;
+                  
+                  const isCollapsed = collapsedCategories.has(category);
+                  const categoryLowStock = filteredItems.filter(item => isLowStock(item.name)).length;
+                  
+                  return (
+                    <div key={category} className="border border-gray-200 rounded-lg">
+                      {/* Category Header */}
+                      <div 
+                        className="bg-gray-50 p-4 cursor-pointer hover:bg-gray-100 transition-colors flex justify-between items-center"
+                        onClick={() => toggleCategoryCollapse(category)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">{isCollapsed ? '▶' : '▼'}</span>
+                          <h4 className="font-semibold capitalize text-lg">
+                            {category.replace(/_/g, ' ')}
+                          </h4>
+                          <span className="text-sm text-gray-500">({filteredItems.length} items)</span>
+                          {categoryLowStock > 0 && (
+                            <span className="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-medium">
+                              {categoryLowStock} low stock
                             </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3 border-b">{data.unit}</td>
-                      <td className="p-3 border-b">
-                        {editingThreshold === ingredient ? (
-                          <div className="flex items-center">
-                            <input 
-                              type="number" 
-                              value={thresholdValue} 
-                              onChange={(e) => setThresholdValue(e.target.value)}
-                              className="border rounded px-2 py-1 w-20 text-center"
-                            />
-                            <button 
-                              onClick={() => saveThreshold(ingredient)}
-                              className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-xs"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center">
-                            <span 
-                              className="cursor-pointer hover:text-blue-600"
-                              onClick={() => startEditingThreshold(ingredient)}
-                            >
-                              {data.threshold || 10}
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-3 border-b">
-                        <span className={`px-2 py-1 rounded text-xs ${isLowStock(ingredient) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                          {isLowStock(ingredient) ? 'Low Stock' : 'In Stock'}
-                        </span>
-                      </td>
-                      <td className="p-3 border-b">
-                        <div className="flex items-center space-x-2">
-                          <button 
-                            onClick={() => handleDecrement(ingredient, customAmount)}
-                            className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                          >
-                            -
-                          </button>
-                          <button 
-                            onClick={() => handleIncrement(ingredient, customAmount)} 
-                            className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors"
-                          >
-                            +
-                          </button>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        <div className="text-sm text-gray-500">
+                          Click to {isCollapsed ? 'expand' : 'collapse'}
+                        </div>
+                      </div>
+                      
+                      {/* Category Items */}
+                      {!isCollapsed && (
+                        <div className="overflow-x-auto">
+                          {/* Mobile-friendly card view for small screens */}
+                          <div className="block md:hidden space-y-3 p-4">
+                            {filteredItems.map(item => (
+                              <div key={item.name} className={`border rounded-lg p-4 ${
+                                isLowStock(item.name) ? 'border-red-300 bg-red-50' : 'border-gray-200 bg-white'
+                              }`}>
+                                <div className="flex justify-between items-start mb-3">
+                                  <div>
+                                    <h5 className="font-semibold capitalize text-lg">
+                                      {item.name.replace(/_/g, ' ')}
+                                    </h5>
+                                    <p className="text-sm text-gray-600">{item.category}</p>
+                                  </div>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                    isLowStock(item.name) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                  }`}>
+                                    {isLowStock(item.name) ? '⚠️ Low' : '✅ OK'}
+                                  </span>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <label className="text-xs text-gray-500 uppercase tracking-wide">Current Stock</label>
+                                    {editingAmount === item.name ? (
+                                      <div className="flex items-center mt-1">
+                                        <input 
+                                          type="number" 
+                                          value={amountValue} 
+                                          onChange={(e) => setAmountValue(e.target.value)}
+                                          className="border rounded px-2 py-1 w-full text-center"
+                                        />
+                                        <button 
+                                          onClick={() => saveAmount(item.name)}
+                                          className="ml-2 bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                                        >
+                                          ✓
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <p 
+                                        className="font-bold text-xl cursor-pointer hover:text-blue-600"
+                                        onClick={() => startEditingAmount(item.name)}
+                                      >
+                                        {item.amount} {item.unit}
+                                      </p>
+                                    )}
+                                  </div>
+                                  
+                                  <div>
+                                    <label className="text-xs text-gray-500 uppercase tracking-wide">Threshold</label>
+                                    {editingThreshold === item.name ? (
+                                      <div className="flex items-center mt-1">
+                                        <input 
+                                          type="number" 
+                                          value={thresholdValue} 
+                                          onChange={(e) => setThresholdValue(e.target.value)}
+                                          className="border rounded px-2 py-1 w-full text-center"
+                                        />
+                                        <button 
+                                          onClick={() => saveThreshold(item.name)}
+                                          className="ml-2 bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                                        >
+                                          ✓
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <p 
+                                        className="font-semibold text-lg cursor-pointer hover:text-blue-600"
+                                        onClick={() => startEditingThreshold(item.name)}
+                                      >
+                                        {item.threshold || 10}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Mobile Quick Actions */}
+                                <div className="space-y-2">
+                                  <div className="flex justify-center gap-2">
+                                    <button 
+                                      onClick={() => applyPresetAdjustment(item.name, 10)}
+                                      className="flex-1 bg-blue-500 text-white py-2 px-3 rounded hover:bg-blue-600 transition-colors text-sm font-medium"
+                                    >
+                                      +10
+                                    </button>
+                                    <button 
+                                      onClick={() => applyPresetAdjustment(item.name, 50)}
+                                      className="flex-1 bg-green-500 text-white py-2 px-3 rounded hover:bg-green-600 transition-colors text-sm font-medium"
+                                    >
+                                      +50
+                                    </button>
+                                    <button 
+                                      onClick={() => applyPresetAdjustment(item.name, 100)}
+                                      className="flex-1 bg-purple-500 text-white py-2 px-3 rounded hover:bg-purple-600 transition-colors text-sm font-medium"
+                                    >
+                                      +100
+                                    </button>
+                                  </div>
+                                  
+                                  <div className="flex justify-center gap-4">
+                                    <button 
+                                      onClick={() => handleDecrement(item.name, customAmount)}
+                                      className="bg-red-500 text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors font-bold text-lg"
+                                    >
+                                      -
+                                    </button>
+                                    <div className="flex items-center">
+                                      <span className="text-sm text-gray-600">±{customAmount}</span>
+                                    </div>
+                                    <button 
+                                      onClick={() => handleIncrement(item.name, customAmount)} 
+                                      className="bg-green-500 text-white w-12 h-12 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors font-bold text-lg"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Desktop table view */}
+                          <table className="w-full border-collapse hidden md:table">
+                            <thead className="bg-gray-25">
+                              <tr>
+                                <th className="text-left p-3 border-b">Ingredient</th>
+                                <th className="text-left p-3 border-b">Current Amount</th>
+                                <th className="text-left p-3 border-b">Unit</th>
+                                <th className="text-left p-3 border-b">Threshold</th>
+                                <th className="text-left p-3 border-b">Status</th>
+                                <th className="text-left p-3 border-b">Quick Actions</th>
+                                <th className="text-left p-3 border-b">Adjust</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {filteredItems.map(item => (
+                                <tr key={item.name} className={`${isLowStock(item.name) ? 'bg-red-50' : 'hover:bg-gray-50'} transition-colors`}>
+                                  <td className="p-3 border-b">
+                                    <span className="capitalize font-medium">
+                                      {item.name.replace(/_/g, ' ')}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 border-b">
+                                    {editingAmount === item.name ? (
+                                      <div className="flex items-center">
+                                        <input 
+                                          type="number" 
+                                          value={amountValue} 
+                                          onChange={(e) => setAmountValue(e.target.value)}
+                                          className="border rounded px-2 py-1 w-20 text-center"
+                                        />
+                                        <button 
+                                          onClick={() => saveAmount(item.name)}
+                                          className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                                        >
+                                          ✓
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span 
+                                        className="cursor-pointer hover:text-blue-600 font-semibold"
+                                        onClick={() => startEditingAmount(item.name)}
+                                        title="Click to edit"
+                                      >
+                                        {item.amount}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-3 border-b text-gray-600">{item.unit}</td>
+                                  <td className="p-3 border-b">
+                                    {editingThreshold === item.name ? (
+                                      <div className="flex items-center">
+                                        <input 
+                                          type="number" 
+                                          value={thresholdValue} 
+                                          onChange={(e) => setThresholdValue(e.target.value)}
+                                          className="border rounded px-2 py-1 w-20 text-center"
+                                        />
+                                        <button 
+                                          onClick={() => saveThreshold(item.name)}
+                                          className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
+                                        >
+                                          ✓
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span 
+                                        className="cursor-pointer hover:text-blue-600"
+                                        onClick={() => startEditingThreshold(item.name)}
+                                        title="Click to edit threshold"
+                                      >
+                                        {item.threshold || 10}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="p-3 border-b">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                      isLowStock(item.name) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                    }`}>
+                                      {isLowStock(item.name) ? '⚠️ Low' : '✅ OK'}
+                                    </span>
+                                  </td>
+                                  <td className="p-3 border-b">
+                                    <div className="flex items-center gap-1">
+                                      <button 
+                                        onClick={() => applyPresetAdjustment(item.name, 10)}
+                                        className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs hover:bg-blue-200 transition-colors"
+                                        title="Add 10"
+                                      >
+                                        +10
+                                      </button>
+                                      <button 
+                                        onClick={() => applyPresetAdjustment(item.name, 50)}
+                                        className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs hover:bg-green-200 transition-colors"
+                                        title="Add 50"
+                                      >
+                                        +50
+                                      </button>
+                                      <button 
+                                        onClick={() => applyPresetAdjustment(item.name, 100)}
+                                        className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs hover:bg-purple-200 transition-colors"
+                                        title="Add 100"
+                                      >
+                                        +100
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="p-3 border-b">
+                                    <div className="flex items-center gap-2">
+                                      <button 
+                                        onClick={() => handleDecrement(item.name, customAmount)}
+                                        className="bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                        title={`Remove ${customAmount}`}
+                                      >
+                                        -
+                                      </button>
+                                      <button 
+                                        onClick={() => handleIncrement(item.name, customAmount)} 
+                                        className="bg-green-500 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-green-600 transition-colors"
+                                        title={`Add ${customAmount}`}
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              
+              {/* No results message */}
+              {filteredInventory.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  <p className="text-lg mb-2">No ingredients found</p>
+                  <p className="text-sm">
+                    {searchTerm ? `Try a different search term or ` : ''}
+                    {selectedCategory !== 'all' ? 'select a different category' : 'check your filters'}
+                  </p>
+                </div>
+              )}
             </div>
+            
+            {/* Bulk Update Modal */}
+            {showBulkUpdateModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-xl font-semibold">Bulk Stock Update</h3>
+                      <button 
+                        onClick={() => setShowBulkUpdateModal(false)}
+                        className="text-gray-500 hover:text-gray-700 text-2xl"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
+                    <div className="mb-4 flex justify-between items-center">
+                      <div className="text-sm text-gray-600">
+                        Select items to update and enter new quantities
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            const updated = { ...bulkUpdateData };
+                            Object.keys(updated).forEach(ingredient => {
+                              updated[ingredient].selected = true;
+                            });
+                            setBulkUpdateData(updated);
+                          }}
+                          className="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200"
+                        >
+                          Select All
+                        </button>
+                        <button
+                          onClick={() => {
+                            const updated = { ...bulkUpdateData };
+                            Object.keys(updated).forEach(ingredient => {
+                              updated[ingredient].selected = false;
+                            });
+                            setBulkUpdateData(updated);
+                          }}
+                          className="text-sm bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="overflow-x-auto max-h-96">
+                      <table className="w-full border-collapse">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr>
+                            <th className="text-left p-3 border-b">
+                              <input 
+                                type="checkbox" 
+                                onChange={(e) => {
+                                  const updated = { ...bulkUpdateData };
+                                  Object.keys(updated).forEach(ingredient => {
+                                    updated[ingredient].selected = e.target.checked;
+                                  });
+                                  setBulkUpdateData(updated);
+                                }}
+                                className="rounded"
+                              />
+                            </th>
+                            <th className="text-left p-3 border-b">Ingredient</th>
+                            <th className="text-left p-3 border-b">Category</th>
+                            <th className="text-left p-3 border-b">Current</th>
+                            <th className="text-left p-3 border-b">New Amount</th>
+                            <th className="text-left p-3 border-b">Unit</th>
+                            <th className="text-left p-3 border-b">Change</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {Object.entries(bulkUpdateData)
+                            .sort(([a], [b]) => a.localeCompare(b))
+                            .map(([ingredient, data]) => (
+                            <tr key={ingredient} className={`${
+                              data.selected ? 'bg-blue-50' : 'hover:bg-gray-50'
+                            } transition-colors`}>
+                              <td className="p-3 border-b">
+                                <input 
+                                  type="checkbox"
+                                  checked={data.selected}
+                                  onChange={(e) => updateBulkItem(ingredient, 'selected', e.target.checked)}
+                                  className="rounded"
+                                />
+                              </td>
+                              <td className="p-3 border-b capitalize font-medium">
+                                {ingredient.replace(/_/g, ' ')}
+                              </td>
+                              <td className="p-3 border-b capitalize text-sm text-gray-600">
+                                {data.category}
+                              </td>
+                              <td className="p-3 border-b font-semibold">
+                                {data.currentAmount}
+                              </td>
+                              <td className="p-3 border-b">
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  value={data.newAmount}
+                                  onChange={(e) => updateBulkItem(ingredient, 'newAmount', parseInt(e.target.value) || 0)}
+                                  className="w-20 px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
+                              <td className="p-3 border-b text-sm text-gray-600">
+                                {data.unit}
+                              </td>
+                              <td className="p-3 border-b">
+                                {data.newAmount !== data.currentAmount && (
+                                  <span className={`text-sm font-medium ${
+                                    data.newAmount > data.currentAmount ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {data.newAmount > data.currentAmount ? '+' : ''}
+                                    {data.newAmount - data.currentAmount}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div className="mt-6 flex justify-between items-center">
+                      <div className="text-sm text-gray-600">
+                        {Object.values(bulkUpdateData).filter(item => item.selected).length} items selected
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setShowBulkUpdateModal(false)}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={applyBulkUpdates}
+                          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+                        >
+                          Apply Updates
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
         

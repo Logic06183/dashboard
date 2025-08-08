@@ -9,8 +9,33 @@ const InventoryManagerDashboard = () => {
   const [isScheduled, setIsScheduled] = useState(false);
   const [emailStatus, setEmailStatus] = useState({ message: '', type: '' });
   const [exportFormat, setExportFormat] = useState('text');
+  const [dailyReportsEnabled, setDailyReportsEnabled] = useState(false);
+  const [lastDailyReport, setLastDailyReport] = useState(null);
+  const [currentInventory, setCurrentInventory] = useState({});
   
   const { data: orders = [], loading } = useFirebaseOrders();
+  
+  // Load current inventory for daily reports
+  useEffect(() => {
+    const loadCurrentInventory = async () => {
+      try {
+        const { db } = await import('../firebase');
+        const inventoryRef = db.collection('inventory');
+        const inventorySnapshot = await inventoryRef.get();
+        
+        const inventoryData = {};
+        inventorySnapshot.forEach((doc) => {
+          inventoryData[doc.id] = doc.data();
+        });
+        
+        setCurrentInventory(inventoryData);
+      } catch (error) {
+        console.error('Error loading inventory for daily reports:', error);
+      }
+    };
+    
+    loadCurrentInventory();
+  }, []);
 
   // Load saved email settings on component mount
   useEffect(() => {
@@ -31,6 +56,21 @@ const InventoryManagerDashboard = () => {
     if (savedEmail && !managerEmail) {
       setManagerEmail(savedEmail);
     }
+    
+    // Check daily report settings
+    const dailyReportEnabled = localStorage.getItem('dailyReportsEnabled') === 'true';
+    setDailyReportsEnabled(dailyReportEnabled);
+    
+    // Load last daily report timestamp
+    const lastReport = localStorage.getItem('lastDailyReportSent');
+    if (lastReport) {
+      setLastDailyReport(new Date(lastReport));
+    }
+    
+    // Check if daily report should be sent automatically
+    if (dailyReportEnabled && managerEmail) {
+      checkAndSendDailyReport();
+    }
   }, []);
 
   // Save manager email when it changes
@@ -40,6 +80,75 @@ const InventoryManagerDashboard = () => {
     }
   }, [managerEmail]);
 
+  // Check and send daily report if needed
+  const checkAndSendDailyReport = async () => {
+    if (!managerEmail || !currentInventory || Object.keys(currentInventory).length === 0) {
+      return;
+    }
+    
+    if (emailNotificationService.shouldSendDailyReport()) {
+      await handleSendDailyReport();
+    }
+  };
+  
+  // Send daily stock report
+  const handleSendDailyReport = async () => {
+    if (!managerEmail) {
+      setEmailStatus({ message: 'Please enter manager email address', type: 'error' });
+      return;
+    }
+    
+    if (!currentInventory || Object.keys(currentInventory).length === 0) {
+      setEmailStatus({ message: 'No inventory data available for daily report', type: 'error' });
+      return;
+    }
+    
+    setEmailStatus({ message: 'Sending daily stock report...', type: 'info' });
+    
+    try {
+      // Get today's orders
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayOrders = orders.filter(order => {
+        const orderDate = new Date(order.orderTime || order.createdAt || Date.now());
+        return orderDate >= today;
+      });
+      
+      const result = await emailNotificationService.sendAutomatedDailyReport(
+        currentInventory,
+        todayOrders,
+        managerEmail
+      );
+      
+      if (result.success) {
+        setEmailStatus({ message: 'Daily stock report sent successfully!', type: 'success' });
+        setLastDailyReport(new Date());
+      } else {
+        setEmailStatus({ message: `Failed to send daily report: ${result.error}`, type: 'error' });
+      }
+    } catch (error) {
+      setEmailStatus({ message: `Error: ${error.message}`, type: 'error' });
+    }
+    
+    // Clear status after 5 seconds
+    setTimeout(() => setEmailStatus({ message: '', type: '' }), 5000);
+  };
+  
+  // Enable/disable daily reports
+  const toggleDailyReports = () => {
+    const newState = !dailyReportsEnabled;
+    setDailyReportsEnabled(newState);
+    localStorage.setItem('dailyReportsEnabled', newState.toString());
+    
+    if (newState) {
+      setEmailStatus({ message: 'Daily reports enabled! Reports will be sent automatically around 10 PM.', type: 'success' });
+    } else {
+      setEmailStatus({ message: 'Daily reports disabled.', type: 'info' });
+    }
+    
+    setTimeout(() => setEmailStatus({ message: '', type: '' }), 5000);
+  };
+  
   // Send immediate summary email
   const handleSendSummary = async () => {
     if (!managerEmail) {
@@ -213,6 +322,36 @@ const InventoryManagerDashboard = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Inventory Manager Dashboard</h2>
         
+        {/* Daily Reports Status */}
+        {dailyReportsEnabled && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-blue-600 mr-2">📅</span>
+                <div>
+                  <span className="text-blue-800 font-medium">
+                    Daily Stock Reports Enabled
+                  </span>
+                  <p className="text-sm text-blue-600">
+                    Automatic reports sent to {managerEmail} around 10 PM daily
+                  </p>
+                  {lastDailyReport && (
+                    <p className="text-xs text-blue-500">
+                      Last sent: {lastDailyReport.toLocaleDateString('en-ZA')} at {lastDailyReport.toLocaleTimeString('en-ZA')}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleSendDailyReport}
+                className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+              >
+                Send Now
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* Manager Configuration */}
         <div className="bg-gray-50 p-4 rounded-lg mb-6">
           <h3 className="text-lg font-semibold mb-4">Manager Settings</h3>
@@ -260,10 +399,17 @@ const InventoryManagerDashboard = () => {
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-3">
             <button
+              onClick={handleSendDailyReport}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+            >
+              📊 Send Daily Stock Report
+            </button>
+            
+            <button
               onClick={handleSendSummary}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
             >
-              📧 Send Summary Now
+              📧 Send Usage Summary
             </button>
             
             {!isScheduled ? (
@@ -281,6 +427,17 @@ const InventoryManagerDashboard = () => {
                 🛑 Disable Schedule
               </button>
             )}
+            
+            <button
+              onClick={toggleDailyReports}
+              className={`px-4 py-2 rounded-md ${
+                dailyReportsEnabled 
+                  ? 'bg-orange-600 text-white hover:bg-orange-700' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              {dailyReportsEnabled ? '🛑 Disable Daily Reports' : '📅 Enable Daily Reports'}
+            </button>
             
             <button
               onClick={handleTestEmail}
@@ -331,6 +488,86 @@ const InventoryManagerDashboard = () => {
         )}
       </div>
 
+      {/* Daily Stock Summary */}
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <h3 className="text-lg font-semibold mb-4">Today's Stock Summary</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="font-medium text-blue-800">Orders Today</h4>
+            <p className="text-2xl font-bold text-blue-600">
+              {orders.filter(order => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const orderDate = new Date(order.orderTime || order.createdAt || Date.now());
+                return orderDate >= today;
+              }).length}
+            </p>
+          </div>
+          
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h4 className="font-medium text-green-800">Inventory Value</h4>
+            <p className="text-2xl font-bold text-green-600">
+              R{Object.entries(currentInventory).reduce((total, [ingredient, data]) => {
+                // Simple cost calculation - would need to import ingredients data
+                return total + (data.amount || 0) * 5; // Rough estimate
+              }, 0).toFixed(0)}
+            </p>
+          </div>
+          
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-medium text-yellow-800">Low Stock Items</h4>
+            <p className="text-2xl font-bold text-yellow-600">
+              {Object.entries(currentInventory).filter(([ingredient, data]) => 
+                data.amount <= (data.threshold || 0)
+              ).length}
+            </p>
+          </div>
+          
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h4 className="font-medium text-purple-800">Total Ingredients</h4>
+            <p className="text-2xl font-bold text-purple-600">
+              {Object.keys(currentInventory).length}
+            </p>
+          </div>
+        </div>
+        
+        {/* Quick Actions for Stock Management */}
+        <div className="border-t pt-4">
+          <h4 className="font-medium mb-3 text-gray-700">Quick Actions</h4>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => window.location.hash = '#/inventory'}
+              className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
+            >
+              📊 View Full Inventory
+            </button>
+            <button
+              onClick={() => {
+                const lowStock = Object.entries(currentInventory)
+                  .filter(([ingredient, data]) => data.amount <= (data.threshold || 0))
+                  .map(([ingredient, data]) => `${ingredient.replace(/_/g, ' ')}: ${data.amount} ${data.unit}`);
+                
+                if (lowStock.length > 0) {
+                  alert(`Low Stock Items:\n\n${lowStock.join('\n')}`);
+                } else {
+                  alert('No low stock items! 🎉');
+                }
+              }}
+              className="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
+            >
+              ⚠️ Check Low Stock
+            </button>
+            <button
+              onClick={() => handleSendDailyReport()}
+              className="bg-green-100 text-green-700 px-3 py-1 rounded text-sm hover:bg-green-200"
+            >
+              📧 Send Report Now
+            </button>
+          </div>
+        </div>
+      </div>
+      
       {/* Usage Summary Component */}
       <InventoryUsageSummary orders={orders} />
     </div>
