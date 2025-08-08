@@ -1,0 +1,136 @@
+# Page snapshot
+
+```yaml
+- heading "John Dough's" [level=1]
+- button:
+  - img
+- navigation:
+  - link "Dashboard":
+    - /url: /
+    - img
+    - text: Dashboard
+  - link "Customers":
+    - /url: /customers
+    - img
+    - text: Customers
+  - link "Orders":
+    - /url: /orders
+    - img
+    - text: Orders
+  - link "Inventory":
+    - /url: /inventory
+    - img
+    - text: Inventory
+  - link "Analytics":
+    - /url: /analytics
+    - img
+    - text: Analytics
+  - link "Settings":
+    - /url: /settings
+    - img
+    - text: Settings
+- banner:
+  - heading "Pizza Orders Dashboard" [level=1]
+  - button "Clear Orders"
+  - button "New Order"
+  - button:
+    - img
+- heading "Simple Direct Order" [level=2]
+- button "×"
+- text: Customer Name
+- textbox "Optional"
+- text: Delivery Method
+- combobox:
+  - option "Window" [selected]
+  - option "Uber Eats"
+  - option "Mr D Food"
+  - option "Bolt Food"
+  - option "Customer Pickup"
+  - option "Staff"
+  - option "Other"
+- text: Prep Time (minutes)
+- spinbutton: "15"
+- paragraph: How many minutes needed to prepare this order
+- heading "Pizza Items" [level=3]
+- 'heading "Pizza #1" [level=4]'
+- text: Pizza Type
+- combobox:
+  - option "DOUGH BALLS (R48.00)"
+  - option "STRETCHED BASE WITH SAUCE (R58.00)"
+  - option "THE CHAMP (R169.00)"
+  - option "LEKKER'IZZA (R195.00)"
+  - option "CHICK TICK BOOM! (R165.00)"
+  - option "MISH-MASH (R159.00)"
+  - option "POPPA'S (R179.00)"
+  - option "PIG IN PARADISE (R169.00)"
+  - option "ARTICHOKE & HAM (R169.00)"
+  - option "GLAZE OF GLORY (R159.00)"
+  - option "MEDITERRANEAN (R175.00)"
+  - option "MARGIE (R125.00)" [selected]
+  - option "OWEN! (R169.00)"
+  - option "CAPRESE (R165.00)"
+  - option "VEGAN HARVEST (R175.00)"
+  - option "VEG SPECIAL (R155.00)"
+  - option "BUILD YOUR OWN (R139.00)"
+  - option "SPUD (R139.00)"
+  - option "GREEK GODDESS (R139.00)"
+  - option "QUATTRO FORMAGGI (R169.00)"
+  - option "MUSHROOM CLOUD (R169.00)"
+- text: Quantity
+- spinbutton: "1"
+- text: Special Instructions
+- textbox "Extra cheese, no olives, etc."
+- button "+ Add Another Pizza"
+- heading "Cold Drinks" [level=3]
+- button "+ Add Cold Drink"
+- heading "Order Summary" [level=3]
+- text: "1 pizza(s), 1 different type(s) Total: R125.00"
+- button "Place Order"
+- paragraph: This form uses a stable Firebase connection that prevents termination errors.
+- paragraph: ✓ Firebase connected and ready to process orders
+- paragraph: Multiple pizzas support enabled - create complex orders with different pizza types.
+- banner:
+  - heading "John Dough's Dashboard" [level=1]
+  - paragraph: Sourdough Pizza Excellence
+  - link "Firebase Test Tool":
+    - /url: /firebase-test
+  - checkbox "Show Completed Orders"
+  - text: Show Completed Orders
+  - button "Clear All Orders"
+- main:
+  - img
+  - text: 100%
+  - heading "John's Daily Sales" [level=3]
+  - paragraph: R0.00
+  - img
+  - text: 0.0%
+  - heading "Pizza Orders" [level=3]
+  - paragraph: "0"
+  - img
+  - text: +12%
+  - heading "Most Popular Pizza" [level=3]
+  - paragraph: The Champ
+  - img
+  - text: On Track
+  - heading "Kitchen Status" [level=3]
+  - paragraph: 0 min
+  - img
+  - text: 0%
+  - heading "Pizza Completion" [level=3]
+  - paragraph: 0/0
+  - heading "Orders by Hour" [level=3]
+  - img: 0 1 2 3 4 5 6 7 8 9 11 13 15 17 19 21 23 0 1 2 3 4
+  - heading "Most Popular Pizzas" [level=3]
+  - img
+  - heading "Orders by Platform" [level=3]
+  - img
+  - heading "Average Preparation Times" [level=3]
+  - img
+  - heading "Business Insights" [level=3]
+  - heading "Peak Hours" [level=4]
+  - paragraph: "Busiest time: N/A Orders: 0"
+  - heading "Best Platform" [level=4]
+  - paragraph: "Platform: N/A Revenue: R0.00"
+  - heading "Customer Base" [level=4]
+  - paragraph: "Total Customers: 0 Avg Order Value: R0"
+```
