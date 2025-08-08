@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import useFirebaseOrders from '../hooks/useFirebaseOrders';
 import { PIZZA_INGREDIENTS } from '../data/ingredients';
 import { db, firebase } from '../firebase';
+import InventoryManagerDashboard from './InventoryManagerDashboard';
 
 // UsageAnalysis component to calculate ingredient usage based on orders
 const UsageAnalysis = ({ orders }) => {
@@ -119,6 +120,12 @@ const UsageAnalysis = ({ orders }) => {
         allIngredients.add(ingredient);
       });
     });
+    // Add cold drink ingredients
+    Object.values(PIZZA_INGREDIENTS.coldDrinks || {}).forEach(drink => {
+      Object.keys(drink.ingredients).forEach(ingredient => {
+        allIngredients.add(ingredient);
+      });
+    });
     
     allIngredients.forEach(ingredient => {
       usage[ingredient] = { used: 0, unit: '', category: '' };
@@ -182,6 +189,25 @@ const UsageAnalysis = ({ orders }) => {
           usage[ingredient].category = data.category;
         });
       });
+      
+      // Process cold drinks
+      if (order.coldDrinks && Array.isArray(order.coldDrinks)) {
+        order.coldDrinks.forEach(drink => {
+          const drinkQuantity = drink.quantity || 1;
+          const drinkType = drink.drinkType;
+          
+          if (PIZZA_INGREDIENTS.coldDrinks && PIZZA_INGREDIENTS.coldDrinks[drinkType]) {
+            Object.entries(PIZZA_INGREDIENTS.coldDrinks[drinkType].ingredients).forEach(([ingredient, data]) => {
+              if (!usage[ingredient]) {
+                usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+              }
+              usage[ingredient].used += data.amount * drinkQuantity;
+              usage[ingredient].unit = data.unit;
+              usage[ingredient].category = data.category;
+            });
+          }
+        });
+      }
     });
     
     // Calculate daily usage based on time range
@@ -373,6 +399,21 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
             });
           });
           
+          // Add cold drink ingredients
+          Object.values(PIZZA_INGREDIENTS.coldDrinks || {}).forEach(drink => {
+            Object.entries(drink.ingredients).forEach(([ingredient, data]) => {
+              if (!inventoryData[ingredient]) {
+                const { unit, category } = data;
+                inventoryData[ingredient] = {
+                  amount: 100, // Default amount
+                  threshold: 20, // Default threshold
+                  unit: unit,
+                  category: category
+                };
+              }
+            });
+          });
+          
           console.log('Created default inventory data with', Object.keys(inventoryData).length, 'ingredients');
           
           // Save default inventory to Firebase
@@ -458,6 +499,17 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
             costPerUnit = pizza.ingredients[ingredient].cost || 0;
             console.log(`Found in pizza ingredients. Cost per unit: ${costPerUnit}`);
             break;
+          }
+        }
+        
+        // Check cold drink ingredients if not found yet
+        if (costPerUnit === 0 && PIZZA_INGREDIENTS.coldDrinks) {
+          for (const drink of Object.values(PIZZA_INGREDIENTS.coldDrinks)) {
+            if (drink.ingredients && drink.ingredients[ingredient]) {
+              costPerUnit = drink.ingredients[ingredient].cost || 0;
+              console.log(`Found in cold drink ingredients. Cost per unit: ${costPerUnit}`);
+              break;
+            }
           }
         }
       }
@@ -605,6 +657,12 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
         allIngredients.add(ingredient);
       });
     });
+    // Add cold drink ingredients
+    Object.values(PIZZA_INGREDIENTS.coldDrinks || {}).forEach(drink => {
+      Object.keys(drink.ingredients).forEach(ingredient => {
+        allIngredients.add(ingredient);
+      });
+    });
     
     allIngredients.forEach(ingredient => {
       usage[ingredient] = { used: 0, unit: '', category: '' };
@@ -668,6 +726,25 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
           usage[ingredient].category = data.category;
         });
       });
+      
+      // Process cold drinks
+      if (order.coldDrinks && Array.isArray(order.coldDrinks)) {
+        order.coldDrinks.forEach(drink => {
+          const drinkQuantity = drink.quantity || 1;
+          const drinkType = drink.drinkType;
+          
+          if (PIZZA_INGREDIENTS.coldDrinks && PIZZA_INGREDIENTS.coldDrinks[drinkType]) {
+            Object.entries(PIZZA_INGREDIENTS.coldDrinks[drinkType].ingredients).forEach(([ingredient, data]) => {
+              if (!usage[ingredient]) {
+                usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+              }
+              usage[ingredient].used += data.amount * drinkQuantity;
+              usage[ingredient].unit = data.unit;
+              usage[ingredient].category = data.category;
+            });
+          }
+        });
+      }
     });
     
     // Calculate daily usage
@@ -697,6 +774,16 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
           if (pizza.ingredients[ingredient]) {
             costPerUnit = pizza.ingredients[ingredient].cost || 0;
             break;
+          }
+        }
+        
+        // Check cold drink ingredients
+        if (costPerUnit === 0 && PIZZA_INGREDIENTS.coldDrinks) {
+          for (const drink of Object.values(PIZZA_INGREDIENTS.coldDrinks)) {
+            if (drink.ingredients && drink.ingredients[ingredient]) {
+              costPerUnit = drink.ingredients[ingredient].cost || 0;
+              break;
+            }
           }
         }
       }
@@ -786,6 +873,12 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
             className={`px-4 py-2 rounded ${activeView === 'forecast' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
           >
             Inventory Forecast
+          </button>
+          <button
+            onClick={() => setActiveView('manager')}
+            className={`px-4 py-2 rounded ${activeView === 'manager' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}
+          >
+            Manager Dashboard
           </button>
         </div>
       </div>
@@ -945,6 +1038,10 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
             <h3 className="font-semibold mb-4">Usage Analysis</h3>
             <UsageAnalysis orders={orders} />
           </div>
+        )}
+
+        {activeView === 'manager' && (
+          <InventoryManagerDashboard />
         )}
 
         {activeView === 'forecast' && (
