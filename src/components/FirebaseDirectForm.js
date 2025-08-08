@@ -2,6 +2,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
+import CustomerSelector from './CustomerSelector';
+import customerService from '../services/CustomerService';
 
 // Direct Firebase configuration - matching successful tests
 const firebaseConfig = {
@@ -92,10 +94,12 @@ const coldDrinksMenu = [
 // with the exact pattern that works in the HTML test
 const FirebaseDirectForm = ({ onClose }) => {
   const [orderData, setOrderData] = useState({
-    customerName: '',
     platform: 'Window',
     prepTimeMinutes: 15
   });
+  
+  // Customer selection state
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
   
   // State for managing multiple pizzas in an order
   const [pizzaItems, setPizzaItems] = useState([
@@ -286,9 +290,27 @@ const FirebaseDirectForm = ({ onClose }) => {
       // Calculate total price
       const totalPrice = calculateTotalPrice();
       
+      // Handle customer information
+      let customer = selectedCustomer;
+      if (!customer && orderData.customerName) {
+        // Fallback for backward compatibility
+        customer = await customerService.getOrCreateCustomer({
+          name: orderData.customerName
+        });
+      } else if (!customer) {
+        customer = {
+          id: null,
+          name: 'Anonymous Customer',
+          phone: '',
+          category: 'New'
+        };
+      }
+
       // Create order object
       const order = {
-        customerName: orderData.customerName || 'Anonymous',
+        customerId: customer.id,
+        customerName: customer.name,
+        phone: customer.phone || '',
         pizzas: processedPizzaItems,
         coldDrinks: processedColdDrinks,
         platform: orderData.platform,
@@ -314,6 +336,18 @@ const FirebaseDirectForm = ({ onClose }) => {
       const docRef = await freshDb.collection('orders').add(order);
       
       console.log('Order submitted successfully! ID:', docRef.id);
+      
+      // Update customer statistics if we have a valid customer
+      if (customer.id) {
+        try {
+          await customerService.updateCustomerStats(customer.id, order);
+          console.log('Customer statistics updated successfully');
+        } catch (error) {
+          console.error('Error updating customer statistics:', error);
+          // Don't fail the order if customer stats update fails
+        }
+      }
+      
       setResult({ 
         status: 'success', 
         message: `Order submitted successfully! ID: ${docRef.id}`,
@@ -322,10 +356,10 @@ const FirebaseDirectForm = ({ onClose }) => {
       
       // Reset form after successful submission
       setOrderData({
-        customerName: '',
         platform: 'Window',
         prepTimeMinutes: 15
       });
+      setSelectedCustomer(null);
       
       // Reset to a single pizza item
       setPizzaItems([{
@@ -382,15 +416,13 @@ const FirebaseDirectForm = ({ onClose }) => {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer Name
+                Customer
               </label>
-              <input
-                type="text"
-                name="customerName"
-                value={orderData.customerName}
-                onChange={handleOrderDataChange}
-                placeholder="Optional"
-                className="w-full p-2 border border-gray-300 rounded"
+              <CustomerSelector
+                selectedCustomer={selectedCustomer}
+                onCustomerSelect={setSelectedCustomer}
+                placeholder="Search existing customer or enter new name..."
+                className="mb-2"
               />
             </div>
             
