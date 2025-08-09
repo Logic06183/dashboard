@@ -100,6 +100,11 @@ const FirebaseDirectForm = ({ onClose }) => {
   
   // Customer selection state
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [useSimpleCustomerInput, setUseSimpleCustomerInput] = useState(true); // Default to simple input
+  const [simpleCustomerName, setSimpleCustomerName] = useState('');
+  const [customerSuggestions, setCustomerSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   
   // State for managing multiple pizzas in an order
   const [pizzaItems, setPizzaItems] = useState([
@@ -119,6 +124,7 @@ const FirebaseDirectForm = ({ onClose }) => {
 
   // Use refs to track component mounted state
   const isMounted = useRef(true);
+  const searchDebounceRef = useRef(null);
   
   // Initialize Firebase once on component mount
   useEffect(() => {
@@ -141,8 +147,60 @@ const FirebaseDirectForm = ({ onClose }) => {
     // Track mounted state for cleanup
     return () => {
       isMounted.current = false;
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
     };
   }, []);
+
+  // Search for customer suggestions when typing
+  const handleCustomerNameChange = async (e) => {
+    const value = e.target.value;
+    setSimpleCustomerName(value);
+    
+    // Clear previous timeout
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    
+    // Hide suggestions if input is empty or too short
+    if (!value || value.length < 2) {
+      setCustomerSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    
+    // Debounce the search
+    searchDebounceRef.current = setTimeout(async () => {
+      setIsLoadingSuggestions(true);
+      try {
+        const results = await customerService.searchCustomers(value);
+        setCustomerSuggestions(results);
+        setShowSuggestions(results.length > 0);
+      } catch (error) {
+        console.error('Error searching customers:', error);
+        setCustomerSuggestions([]);
+        setShowSuggestions(false);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    }, 300); // 300ms debounce
+  };
+
+  // Handle selecting a suggestion
+  const handleSelectSuggestion = (customer) => {
+    setSimpleCustomerName(customer.name);
+    setShowSuggestions(false);
+    setCustomerSuggestions([]);
+  };
+
+  // Hide suggestions when clicking outside
+  const handleInputBlur = () => {
+    // Delay to allow clicking on suggestions
+    setTimeout(() => {
+      setShowSuggestions(false);
+    }, 200);
+  };
   
   // Handle changes to the main order data
   const handleOrderDataChange = (e) => {
@@ -246,6 +304,15 @@ const FirebaseDirectForm = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Validate customer name in simple mode
+    if (useSimpleCustomerInput && !simpleCustomerName.trim()) {
+      setResult({ 
+        status: 'error', 
+        message: 'Please enter a customer name'
+      });
+      return;
+    }
+    
     // Get a fresh instance of Firebase to be certain we have a valid connection
     const { db: freshDb, error } = getFirebaseInstance();
     
@@ -292,7 +359,16 @@ const FirebaseDirectForm = ({ onClose }) => {
       
       // Handle customer information
       let customer = selectedCustomer;
-      if (!customer && orderData.customerName) {
+      
+      // If using simple input mode, use the simple customer name
+      if (useSimpleCustomerInput && simpleCustomerName) {
+        customer = {
+          id: null,
+          name: simpleCustomerName.trim(),
+          phone: '',
+          category: 'New'
+        };
+      } else if (!customer && orderData.customerName) {
         // Fallback for backward compatibility
         customer = await customerService.getOrCreateCustomer({
           name: orderData.customerName
@@ -360,6 +436,9 @@ const FirebaseDirectForm = ({ onClose }) => {
         prepTimeMinutes: 15
       });
       setSelectedCustomer(null);
+      setSimpleCustomerName(''); // Clear simple customer name
+      setCustomerSuggestions([]); // Clear suggestions
+      setShowSuggestions(false);
       
       // Reset to a single pizza item
       setPizzaItems([{
@@ -415,15 +494,88 @@ const FirebaseDirectForm = ({ onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Customer
-              </label>
-              <CustomerSelector
-                selectedCustomer={selectedCustomer}
-                onCustomerSelect={setSelectedCustomer}
-                placeholder="Search existing customer or enter new name..."
-                className="mb-2"
-              />
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Customer Name
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseSimpleCustomerInput(!useSimpleCustomerInput);
+                    // Clear the other input when switching
+                    if (!useSimpleCustomerInput) {
+                      setSelectedCustomer(null);
+                    } else {
+                      setSimpleCustomerName('');
+                    }
+                  }}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  {useSimpleCustomerInput ? 'Switch to Customer Search' : 'Switch to Simple Input'}
+                </button>
+              </div>
+              
+              {useSimpleCustomerInput ? (
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={simpleCustomerName}
+                    onChange={handleCustomerNameChange}
+                    onFocus={() => {
+                      if (customerSuggestions.length > 0) {
+                        setShowSuggestions(true);
+                      }
+                    }}
+                    onBlur={handleInputBlur}
+                    placeholder="Enter customer name..."
+                    className="w-full p-2 border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    required
+                    autoComplete="off"
+                  />
+                  
+                  {/* Loading indicator */}
+                  {isLoadingSuggestions && (
+                    <div className="absolute right-2 top-2 text-gray-400">
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                  )}
+                  
+                  {/* Suggestions dropdown */}
+                  {showSuggestions && customerSuggestions.length > 0 && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
+                      {customerSuggestions.map((customer, index) => (
+                        <button
+                          key={customer.id || index}
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none border-b border-gray-100 last:border-b-0"
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent blur
+                            handleSelectSuggestion(customer);
+                          }}
+                        >
+                          <div className="font-medium">{customer.name}</div>
+                          {customer.phone && (
+                            <div className="text-sm text-gray-500">{customer.phone}</div>
+                          )}
+                          <div className="text-xs text-gray-400">
+                            {customer.totalOrders || 0} orders • {customer.category || 'New'} customer
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <CustomerSelector
+                  selectedCustomer={selectedCustomer}
+                  onCustomerSelect={setSelectedCustomer}
+                  placeholder="Search existing customer or enter new name..."
+                  className="mb-2"
+                />
+              )}
             </div>
             
             <div>
