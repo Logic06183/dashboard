@@ -10,12 +10,14 @@ import Sidebar from './components/Sidebar';
 import HookOrderTest from './components/HookOrderTest';
 import FirebaseDirectForm from './components/FirebaseDirectForm';
 import OrderCleanupUtility from './components/OrderCleanupUtility';
+import TestCustomerData from './components/TestCustomerData';
 import FirebaseService from './services/FirebaseService';
 import './App.css';
 
 function App() {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [showTestForm, setShowTestForm] = useState(false);
+  const [showCustomerTest, setShowCustomerTest] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
   // Use Firebase for real-time order updates
@@ -145,6 +147,22 @@ function App() {
           </div>
         </div>
       )}
+
+      {showCustomerTest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-auto">
+            <TestCustomerData onClose={() => setShowCustomerTest(false)} />
+          </div>
+        </div>
+      )}
+      
+      {/* Floating button to open customer test */}
+      <button
+        onClick={() => setShowCustomerTest(true)}
+        className="fixed bottom-4 right-4 bg-purple-600 text-white px-4 py-2 rounded-full shadow-lg hover:bg-purple-700 z-40"
+      >
+        Test Customers
+      </button>
     </Router>
   );
 }
