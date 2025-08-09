@@ -3,7 +3,19 @@
  * Handles customer database operations and standardization
  */
 
-import FirebaseService from './FirebaseService';
+import { db } from './FirebaseService';
+import { 
+  collection, 
+  doc, 
+  addDoc, 
+  updateDoc, 
+  getDoc, 
+  getDocs, 
+  query, 
+  where,
+  orderBy,
+  limit
+} from 'firebase/firestore';
 
 class CustomerService {
   constructor() {
@@ -44,7 +56,13 @@ class CustomerService {
     if (!searchTerm || searchTerm.length < 2) return [];
 
     try {
-      const customers = await FirebaseService.getCollection(this.customersCollection);
+      const customersRef = collection(db, this.customersCollection);
+      const snapshot = await getDocs(customersRef);
+      
+      const customers = [];
+      snapshot.forEach(doc => {
+        customers.push({ id: doc.id, ...doc.data() });
+      });
       
       const normalizedSearch = searchTerm.toLowerCase().trim();
       
@@ -69,9 +87,16 @@ class CustomerService {
 
     try {
       const formattedPhone = this.formatPhoneNumber(phone);
-      const customers = await FirebaseService.getCollection(this.customersCollection);
+      const customersRef = collection(db, this.customersCollection);
+      const q = query(customersRef, where('phone', '==', formattedPhone));
+      const snapshot = await getDocs(q);
       
-      return customers.find(customer => customer.phone === formattedPhone) || null;
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        return { id: doc.id, ...doc.data() };
+      }
+      
+      return null;
     } catch (error) {
       console.error('Error getting customer by phone:', error);
       return null;
@@ -107,10 +132,11 @@ class CustomerService {
         updatedAt: now
       };
 
-      const customerId = await FirebaseService.addDocument(this.customersCollection, standardizedCustomer);
+      const customersRef = collection(db, this.customersCollection);
+      const docRef = await addDoc(customersRef, standardizedCustomer);
       
       return {
-        id: customerId,
+        id: docRef.id,
         ...standardizedCustomer
       };
     } catch (error) {
@@ -132,7 +158,8 @@ class CustomerService {
         updatedAt: new Date()
       };
 
-      await FirebaseService.updateDocument(this.customersCollection, customerId, updates);
+      const customerRef = doc(db, this.customersCollection, customerId);
+      await updateDoc(customerRef, updates);
       return true;
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -148,7 +175,9 @@ class CustomerService {
    */
   async updateCustomerStats(customerId, orderData) {
     try {
-      const customer = await FirebaseService.getDocument(this.customersCollection, customerId);
+      const customerRef = doc(db, this.customersCollection, customerId);
+      const customerDoc = await getDoc(customerRef);
+      const customer = customerDoc.exists() ? { id: customerDoc.id, ...customerDoc.data() } : null;
       if (!customer) return false;
 
       const orderValue = this.calculateOrderValue(orderData);
@@ -183,7 +212,8 @@ class CustomerService {
         updatedAt: new Date()
       };
 
-      await FirebaseService.updateDocument(this.customersCollection, customerId, updates);
+      // customerRef already declared at the beginning of this function
+      await updateDoc(customerRef, updates);
       return true;
     } catch (error) {
       console.error('Error updating customer stats:', error);
@@ -410,7 +440,15 @@ class CustomerService {
    */
   async getAllCustomers() {
     try {
-      return await FirebaseService.getCollection(this.customersCollection);
+      const customersRef = collection(db, this.customersCollection);
+      const snapshot = await getDocs(customersRef);
+      
+      const customers = [];
+      snapshot.forEach(doc => {
+        customers.push({ id: doc.id, ...doc.data() });
+      });
+      
+      return customers;
     } catch (error) {
       console.error('Error getting all customers:', error);
       return [];
