@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebase';
+import useQueueCalculator from '../hooks/useQueueCalculator';
 
 const NewSimpleOrderForm = ({ onClose }) => {
+  const { calculateEstimatedPrepTime, formatTimeEstimate, totalPizzasInQueue } = useQueueCalculator();
   const [status, setStatus] = useState('idle');
   const [orderData, setOrderData] = useState({
     customerName: 'John Doe',
@@ -208,6 +210,24 @@ const NewSimpleOrderForm = ({ onClose }) => {
             required
           />
           <p className="text-xs text-gray-500 mt-1">How many minutes needed to prepare this order</p>
+          
+          {/* Dynamic Queue Estimate Preview */}
+          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="text-sm font-medium text-blue-800 mb-1">
+              Queue Estimate Preview
+            </div>
+            <div className="text-sm text-blue-600">
+              Current queue: <span className="font-semibold">{totalPizzasInQueue} pizzas</span>
+            </div>
+            <div className="text-sm text-blue-600">
+              This order ready in: <span className="font-semibold">
+                ~{formatTimeEstimate(calculateEstimatedPrepTime(orderData.quantity || 1))}
+              </span>
+            </div>
+            <div className="text-xs text-blue-500 mt-1">
+              * Estimate based on current kitchen workload
+            </div>
+          </div>
         </div>
         
         <div>

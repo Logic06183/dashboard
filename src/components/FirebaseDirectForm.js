@@ -4,6 +4,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 import CustomerSelector from './CustomerSelector';
 import customerService from '../services/CustomerService';
+import useQueueCalculator from '../hooks/useQueueCalculator';
 
 // Direct Firebase configuration - matching successful tests
 const firebaseConfig = {
@@ -93,6 +94,7 @@ const coldDrinksMenu = [
 // This form is simplified and uses a direct Firebase approach
 // with the exact pattern that works in the HTML test
 const FirebaseDirectForm = ({ onClose }) => {
+  const { calculateEstimatedPrepTime, formatTimeEstimate, totalPizzasInQueue } = useQueueCalculator();
   const [orderData, setOrderData] = useState({
     platform: 'Window',
     prepTimeMinutes: 15
@@ -614,6 +616,26 @@ const FirebaseDirectForm = ({ onClose }) => {
                 required
               />
               <p className="text-xs text-gray-500 mt-1">How many minutes needed to prepare this order</p>
+              
+              {/* Dynamic Queue Estimate Preview */}
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="text-sm font-medium text-blue-800 mb-1">
+                  Queue Estimate Preview
+                </div>
+                <div className="text-sm text-blue-600">
+                  Current queue: <span className="font-semibold">{totalPizzasInQueue} pizzas</span>
+                </div>
+                <div className="text-sm text-blue-600">
+                  Estimated ready time: <span className="font-semibold">
+                    ~{formatTimeEstimate(calculateEstimatedPrepTime(
+                      pizzaItems ? pizzaItems.reduce((sum, pizza) => sum + (pizza.quantity || 1), 0) : 1
+                    ))}
+                  </span>
+                </div>
+                <div className="text-xs text-blue-500 mt-1">
+                  * Estimate updates automatically based on current kitchen workload
+                </div>
+              </div>
             </div>
           </div>
           

@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { format, isAfter, isBefore, startOfDay, addDays, addHours } from 'date-fns';
 import useFirebaseOrders from '../hooks/useFirebaseOrders';
-import { updatePizzaStatus, updateOrder } from '../services/FirebaseService';
+import useQueueCalculator from '../hooks/useQueueCalculator';
+import { updatePizzaStatus, updateOrder, markOrderAsWaste, markPizzasAsWaste } from '../services/FirebaseService';
+import WasteReasonModal from './WasteReasonModal';
 
 const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrder }) => {
   const { data: firebaseOrders, loading, error } = useFirebaseOrders();
+  const { getOrderEstimate, formatTimeEstimate } = useQueueCalculator();
   const [displayOrders, setDisplayOrders] = useState([]);
   const [highlightedOrders, setHighlightedOrders] = useState({});
   const [currentTime, setCurrentTime] = useState(new Date());
+  
+  // Waste management state
+  const [wasteModalOpen, setWasteModalOpen] = useState(false);
+  const [wasteOrderData, setWasteOrderData] = useState(null);
+  const [wasteType, setWasteType] = useState('order'); // 'order' or 'pizza'
   
   // Update current time every second for real-time countdown
   useEffect(() => {
@@ -209,6 +217,35 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
     return !!highlightedOrders[orderId];
   };
 
+  // Waste management functions
+  const handleMarkOrderAsWaste = (order) => {
+    setWasteOrderData(order);
+    setWasteType('order');
+    setWasteModalOpen(true);
+  };
+
+  const handleMarkPizzasAsWaste = (order) => {
+    setWasteOrderData(order);
+    setWasteType('pizza');
+    setWasteModalOpen(true);
+  };
+
+  const handleWasteConfirm = async (wasteData) => {
+    try {
+      if (wasteType === 'order') {
+        await markOrderAsWaste(wasteOrderData.id || wasteOrderData.orderId, wasteData);
+        console.log('Order marked as waste successfully');
+      } else if (wasteType === 'pizza') {
+        await markPizzasAsWaste(wasteOrderData.id || wasteOrderData.orderId, wasteData.pizzaIndexes, wasteData);
+        console.log('Pizzas marked as waste successfully');
+      }
+      // The orders will automatically update through the Firebase subscription
+    } catch (error) {
+      console.error('Error marking as waste:', error);
+      alert('Error marking as waste: ' + error.message);
+    }
+  };
+
   if (loading) {
     return <div className="p-4 text-center">Loading orders...</div>;
   }
@@ -350,14 +387,17 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
             <th className="px-4 py-3 border-b font-bold">Cold Drinks</th>
             <th className="px-4 py-3 border-b font-bold">Special Instructions</th>
             <th className="px-4 py-3 border-b font-bold">Prep Time</th>
+            <th className="px-4 py-3 border-b font-bold text-blue-600">Queue Position</th>
             <th className="px-4 py-3 border-b font-bold">Status</th>
             <th className="px-4 py-3 border-b font-bold">Done</th>
+            <th className="px-4 py-3 border-b font-bold text-red-600">Waste Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
           {sortedOrders.map(order => {
             const isCompleted = order.status === 'completed';
             const statusClass = getTimeStatusClass(order.timeStatus);
+            const orderEstimate = getOrderEstimate(order.id || order.orderId);
 
             return (
               <tr 
@@ -451,6 +491,23 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
                   ) : '-'}
                 </td>
                 <td className="px-4 py-3 text-sm font-medium">{order.prepTimeMinutes ? `${order.prepTimeMinutes} min` : order.prepTime ? `${order.prepTime} min` : '-'}</td>
+                <td className="px-4 py-3 text-sm">
+                  {orderEstimate && !isCompleted ? (
+                    <div className="text-center">
+                      <div className="font-medium text-blue-600">
+                        Ready in ~{formatTimeEstimate(orderEstimate.estimatedPrepTime)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        ({orderEstimate.pizzasAhead} pizzas ahead)
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Position #{orderEstimate.position}
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-center block">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}`}>
                     {isCompleted ? 'Completed' : order.timeStatus}
@@ -460,6 +517,26 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
                   <span className={`px-2 py-1 text-xs font-semibold rounded-full ${isCompleted ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                     {isCompleted ? 'Done' : 'In Progress'}
                   </span>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => handleMarkOrderAsWaste(order)}
+                      className="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs font-medium"
+                      title="Mark entire order as waste"
+                    >
+                      Waste Order
+                    </button>
+                    {order.pizzas && order.pizzas.length > 1 && (
+                      <button
+                        onClick={() => handleMarkPizzasAsWaste(order)}
+                        className="px-2 py-1 bg-orange-100 text-orange-700 rounded hover:bg-orange-200 text-xs font-medium"
+                        title="Mark specific pizzas as waste"
+                      >
+                        Waste Pizzas
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
@@ -473,6 +550,15 @@ const TableKitchenDisplay = ({ onStatusChange, onPizzaStatusChange, onArchiveOrd
           <p className="text-gray-400 mt-2">New orders will appear here automatically</p>
         </div>
       )}
+
+      {/* Waste Reason Modal */}
+      <WasteReasonModal
+        isOpen={wasteModalOpen}
+        onClose={() => setWasteModalOpen(false)}
+        onConfirm={handleWasteConfirm}
+        orderData={wasteOrderData}
+        wasteType={wasteType}
+      />
     </div>
   );
 };

@@ -1,13 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import FirebaseService from '../../services/FirebaseService';
+import useQueueCalculator from '../../hooks/useQueueCalculator';
+import WasteReasonModal from '../WasteReasonModal';
 
-const { updateOrder, subscribeToOrders } = FirebaseService;
+const { updateOrder, subscribeToOrders, markOrderAsWaste, markPizzasAsWaste } = FirebaseService;
 
 const OrdersPage = () => {
+  const { getOrderEstimate, formatTimeEstimate } = useQueueCalculator();
   const [orders, setOrders] = useState([]);
   const [showCompleted, setShowCompleted] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [highlightedOrders, setHighlightedOrders] = useState({});
+  
+  // Waste management state
+  const [wasteModalOpen, setWasteModalOpen] = useState(false);
+  const [wasteOrderData, setWasteOrderData] = useState(null);
+  const [wasteType, setWasteType] = useState('order');
   
   // Load highlighted orders from localStorage on component mount
   useEffect(() => {
@@ -108,6 +116,35 @@ const OrdersPage = () => {
     } catch (error) {
       console.error('Error calculating time status:', error);
       return null;
+    }
+  };
+
+  // Waste management functions
+  const handleMarkOrderAsWaste = (order) => {
+    setWasteOrderData(order);
+    setWasteType('order');
+    setWasteModalOpen(true);
+  };
+
+  const handleMarkPizzasAsWaste = (order) => {
+    setWasteOrderData(order);
+    setWasteType('pizza');
+    setWasteModalOpen(true);
+  };
+
+  const handleWasteConfirm = async (wasteData) => {
+    try {
+      if (wasteType === 'order') {
+        await markOrderAsWaste(wasteOrderData.id || wasteOrderData.orderId, wasteData);
+        console.log('Order marked as waste successfully');
+      } else if (wasteType === 'pizza') {
+        await markPizzasAsWaste(wasteOrderData.id || wasteOrderData.orderId, wasteData.pizzaIndexes, wasteData);
+        console.log('Pizzas marked as waste successfully');
+      }
+      // The orders will automatically update through the Firebase subscription
+    } catch (error) {
+      console.error('Error marking as waste:', error);
+      alert('Error marking as waste: ' + error.message);
     }
   };
 
@@ -311,6 +348,19 @@ const OrdersPage = () => {
                   {order.customerName || 'Anonymous Customer'}
                 </p>
                 <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
+                {(() => {
+                  const orderEstimate = getOrderEstimate(order.id || order.orderId);
+                  return orderEstimate ? (
+                    <div className="mb-2 p-2 bg-red-50 rounded-md">
+                      <div className="text-sm font-medium text-red-600">
+                        Ready in ~{formatTimeEstimate(orderEstimate.estimatedPrepTime)}
+                      </div>
+                      <div className="text-xs text-red-500">
+                        {orderEstimate.pizzasAhead} pizzas ahead • Position #{orderEstimate.position}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between items-center">
                   <div>
                     <h4 className="font-semibold">{order.customer}</h4>
@@ -397,6 +447,32 @@ const OrdersPage = () => {
                     )}
                   </div>
                 )}
+                
+                {/* Waste Actions */}
+                <div className="mt-3 pt-3 border-t border-gray-200 flex gap-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleMarkOrderAsWaste(order);
+                    }}
+                    className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm font-medium"
+                    title="Mark entire order as waste"
+                  >
+                    Waste Order
+                  </button>
+                  {order.pizzas && order.pizzas.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkPizzasAsWaste(order);
+                      }}
+                      className="px-3 py-1 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 text-sm font-medium"
+                      title="Mark specific pizzas as waste"
+                    >
+                      Waste Pizzas
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -423,6 +499,19 @@ const OrdersPage = () => {
                   {order.customerName || 'Anonymous Customer'}
                 </p>
                 <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
+                {(() => {
+                  const orderEstimate = getOrderEstimate(order.id || order.orderId);
+                  return orderEstimate ? (
+                    <div className="mb-2 p-2 bg-orange-50 rounded-md">
+                      <div className="text-sm font-medium text-orange-600">
+                        Ready in ~{formatTimeEstimate(orderEstimate.estimatedPrepTime)}
+                      </div>
+                      <div className="text-xs text-orange-500">
+                        {orderEstimate.pizzasAhead} pizzas ahead • Position #{orderEstimate.position}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between items-center">
                   <div>
                     <h4 className="font-semibold">{order.customer}</h4>
@@ -533,6 +622,19 @@ const OrdersPage = () => {
                   {order.customerName || 'Anonymous Customer'}
                 </p>
                 <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
+                {(() => {
+                  const orderEstimate = getOrderEstimate(order.id || order.orderId);
+                  return orderEstimate ? (
+                    <div className="mb-2 p-2 bg-blue-50 rounded-md">
+                      <div className="text-sm font-medium text-blue-600">
+                        Ready in ~{formatTimeEstimate(orderEstimate.estimatedPrepTime)}
+                      </div>
+                      <div className="text-xs text-blue-500">
+                        {orderEstimate.pizzasAhead} pizzas ahead • Position #{orderEstimate.position}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex justify-between items-center">
                   <div>
                     <h4 className="font-semibold">{order.customer}</h4>
@@ -726,6 +828,15 @@ const OrdersPage = () => {
           )}
         </div>
       )}
+
+      {/* Waste Reason Modal */}
+      <WasteReasonModal
+        isOpen={wasteModalOpen}
+        onClose={() => setWasteModalOpen(false)}
+        onConfirm={handleWasteConfirm}
+        orderData={wasteOrderData}
+        wasteType={wasteType}
+      />
     </div>
   );
 };
