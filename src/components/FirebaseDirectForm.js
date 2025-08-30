@@ -209,6 +209,13 @@ const FirebaseDirectForm = ({ onClose }) => {
   // Handle changes to an individual pizza item
   const handlePizzaItemChange = (e, pizzaId) => {
     const { name, value } = e.target;
+    
+    // If quantity is set to 0, remove the pizza item
+    if (name === 'quantity' && parseInt(value, 10) === 0) {
+      setPizzaItems(prevItems => prevItems.filter(item => item.id !== pizzaId));
+      return;
+    }
+    
     setPizzaItems(prevItems => {
       return prevItems.map(item => {
         if (item.id === pizzaId) {
@@ -727,11 +734,12 @@ const FirebaseDirectForm = ({ onClose }) => {
                       name="quantity"
                       value={pizza.quantity}
                       onChange={(e) => handlePizzaItemChange(e, pizza.id)}
-                      min="1"
+                      min="0"
                       max="10"
                       className="w-full p-2 border border-gray-300 rounded"
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">Set to 0 to remove this pizza</p>
                   </div>
                   
                   <div>
