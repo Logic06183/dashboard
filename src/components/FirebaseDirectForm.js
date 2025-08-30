@@ -277,7 +277,8 @@ const FirebaseDirectForm = ({ onClose }) => {
   
   // Remove a pizza from the order
   const removePizzaItem = (pizzaId) => {
-    if (pizzaItems.length > 1) {
+    // Allow removing pizzas if there are cold drinks, otherwise require at least one pizza
+    if (pizzaItems.length > 1 || coldDrinks.length > 0) {
       setPizzaItems(prev => prev.filter(item => item.id !== pizzaId));
     }
   };
@@ -305,6 +306,15 @@ const FirebaseDirectForm = ({ onClose }) => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate that there's at least one item (pizza or drink)
+    if (pizzaItems.length === 0 && coldDrinks.length === 0) {
+      setResult({ 
+        status: 'error', 
+        message: 'Please add at least one pizza or cold drink to the order'
+      });
+      return;
+    }
     
     // Validate customer name in simple mode
     if (useSimpleCustomerInput && !simpleCustomerName.trim()) {
@@ -646,7 +656,7 @@ const FirebaseDirectForm = ({ onClose }) => {
               <div key={pizza.id} className="bg-gray-50 p-3 rounded-lg mb-3 border">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-medium">Pizza #{index+1}</h4>
-                  {pizzaItems.length > 1 && (
+                  {(pizzaItems.length > 1 || coldDrinks.length > 0) && (
                     <button 
                       type="button"
                       onClick={() => removePizzaItem(pizza.id)}

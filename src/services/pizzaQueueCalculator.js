@@ -24,6 +24,20 @@ class PizzaQueueCalculator {
   }
 
   /**
+   * Check if an item is a doughball (should not count towards pizza queue)
+   * @param {string} itemType - The pizza/item type name
+   * @returns {boolean} Whether the item is a doughball
+   */
+  isDoughball(itemType) {
+    if (!itemType) return false;
+    const lowerType = itemType.toLowerCase();
+    return lowerType.includes('doughball') || 
+           lowerType.includes('dough ball') ||
+           lowerType === 'garlic doughballs' ||
+           lowerType === 'garlic bread balls';
+  }
+
+  /**
    * Initialize the calculator with real-time order subscription
    */
   initialize() {
@@ -37,6 +51,7 @@ class PizzaQueueCalculator {
     // Subscribe to real-time order updates
     this.unsubscribeFromOrders = FirebaseService.subscribeToOrders((orders) => {
       this.orders = orders || [];
+      console.log('[QUEUE CALCULATOR] Orders updated, recalculating queue...');
       this.notifySubscribers();
     });
 
@@ -103,8 +118,9 @@ class PizzaQueueCalculator {
     activeOrders.forEach(order => {
       if (order.pizzas && Array.isArray(order.pizzas)) {
         order.pizzas.forEach((pizza, index) => {
-          // Only count pizzas that haven't been cooked yet
-          if (!order.cooked || !order.cooked[index]) {
+          // Only count pizzas that haven't been cooked yet and exclude doughballs
+          if ((!order.cooked || !order.cooked[index]) && 
+              !this.isDoughball(pizza.pizzaType || pizza.type)) {
             totalPizzas += pizza.quantity || 1;
           }
         });
