@@ -109,14 +109,7 @@ const FirebaseDirectForm = ({ onClose }) => {
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   
   // State for managing multiple pizzas in an order
-  const [pizzaItems, setPizzaItems] = useState([
-    {
-      id: Date.now(), // unique ID for this pizza item
-      pizzaType: 'MARGIE',
-      quantity: 1,
-      specialInstructions: ''
-    }
-  ]);
+  const [pizzaItems, setPizzaItems] = useState([]);
   
   // State for managing cold drinks
   const [coldDrinks, setColdDrinks] = useState([]);
@@ -461,13 +454,8 @@ const FirebaseDirectForm = ({ onClose }) => {
       setCustomerSuggestions([]); // Clear suggestions
       setShowSuggestions(false);
       
-      // Reset to a single pizza item
-      setPizzaItems([{
-        id: Date.now(),
-        pizzaType: 'MARGIE',
-        quantity: 1,
-        specialInstructions: ''
-      }]);
+      // Reset to empty arrays - allow cold drinks only orders
+      setPizzaItems([]);
       setColdDrinks([]);
     } catch (error) {
       console.error('Error submitting order:', error);
@@ -644,13 +632,21 @@ const FirebaseDirectForm = ({ onClose }) => {
                 <div className="text-sm text-blue-600">
                   Current queue: <span className="font-semibold">{totalPizzasInQueue} pizzas</span>
                 </div>
-                <div className="text-sm text-blue-600">
-                  Estimated ready time: <span className="font-semibold">
-                    ~{formatTimeEstimate(calculateEstimatedPrepTime(
-                      pizzaItems ? pizzaItems.reduce((sum, pizza) => sum + (pizza.quantity || 1), 0) : 1
-                    ))}
-                  </span>
-                </div>
+                {pizzaItems.length > 0 && (
+                  <div className="text-sm text-blue-600">
+                    Estimated ready time: <span className="font-semibold">
+                      ~{formatTimeEstimate(calculateEstimatedPrepTime(
+                        pizzaItems.reduce((sum, pizza) => sum + (pizza.quantity || 1), 0)
+                      ))}
+                    </span>
+                  </div>
+                )}
+                
+                {pizzaItems.length === 0 && coldDrinks.length > 0 && (
+                  <div className="text-sm text-green-600">
+                    <span className="font-semibold">Cold drinks only - Ready immediately!</span>
+                  </div>
+                )}
                 
                 {/* Rush period indicator */}
                 {queueData?.rushInfo?.isRushPeriod && (
@@ -675,7 +671,19 @@ const FirebaseDirectForm = ({ onClose }) => {
           <div className="border-t pt-4">
             <h3 className="font-medium text-gray-800 mb-2">Pizza Items</h3>
             
-            {pizzaItems.map((pizza, index) => (
+            {pizzaItems.length === 0 ? (
+              <div className="bg-gray-50 p-4 rounded-lg border border-dashed border-gray-400 text-center">
+                <p className="text-gray-600 mb-2">No pizzas added yet</p>
+                <button
+                  type="button"
+                  onClick={addPizzaItem}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                >
+                  Add First Pizza
+                </button>
+              </div>
+            ) : (
+              pizzaItems.map((pizza, index) => (
               <div key={pizza.id} className="bg-gray-50 p-3 rounded-lg mb-3 border">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-medium">Pizza #{index+1}</h4>
@@ -740,15 +748,18 @@ const FirebaseDirectForm = ({ onClose }) => {
                   </div>
                 </div>
               </div>
-            ))}
+              ))
+            )}
             
-            <button
-              type="button"
-              onClick={addPizzaItem}
-              className="mt-2 w-full py-2 px-4 border border-dashed border-gray-400 text-gray-600 rounded hover:bg-gray-50"
-            >
-              + Add Another Pizza
-            </button>
+            {pizzaItems.length > 0 && (
+              <button
+                type="button"
+                onClick={addPizzaItem}
+                className="mt-2 w-full py-2 px-4 border border-dashed border-gray-400 text-gray-600 rounded hover:bg-gray-50"
+              >
+                + Add Another Pizza
+              </button>
+            )}
           </div>
           
           <div className="border-t pt-4">
@@ -818,11 +829,18 @@ const FirebaseDirectForm = ({ onClose }) => {
           <div className="bg-gray-50 p-3 rounded-lg border">
             <h3 className="font-medium text-gray-800 mb-1">Order Summary</h3>
             <div className="text-sm text-gray-600 mb-2">
-              {pizzaItems.reduce((total, item) => total + item.quantity, 0)} pizza(s), {pizzaItems.length} different type(s)
+              {pizzaItems.length > 0 && (
+                <span className="block">
+                  {pizzaItems.reduce((total, item) => total + item.quantity, 0)} pizza(s), {pizzaItems.length} different type(s)
+                </span>
+              )}
               {coldDrinks.length > 0 && (
                 <span className="block">
                   {coldDrinks.reduce((total, item) => total + item.quantity, 0)} drink(s), {coldDrinks.length} different type(s)
                 </span>
+              )}
+              {pizzaItems.length === 0 && coldDrinks.length === 0 && (
+                <span className="text-gray-500 italic">No items added yet</span>
               )}
             </div>
             <div className="font-bold text-lg">
