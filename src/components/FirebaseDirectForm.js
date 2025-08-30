@@ -94,7 +94,7 @@ const coldDrinksMenu = [
 // This form is simplified and uses a direct Firebase approach
 // with the exact pattern that works in the HTML test
 const FirebaseDirectForm = ({ onClose }) => {
-  const { calculateEstimatedPrepTime, formatTimeEstimate, totalPizzasInQueue } = useQueueCalculator();
+  const { calculateEstimatedPrepTime, formatTimeEstimate, totalPizzasInQueue, queueData } = useQueueCalculator();
   const [orderData, setOrderData] = useState({
     platform: 'Window',
     prepTimeMinutes: 15
@@ -425,6 +425,15 @@ const FirebaseDirectForm = ({ onClose }) => {
       
       console.log('Order submitted successfully! ID:', docRef.id);
       
+      // Track window customer orders for delay notifications
+      if (orderData.platform === 'Window' && pizzaItems.length > 0) {
+        // Import queue calculator to track this order
+        const queueCalculator = await import('../services/pizzaQueueCalculator');
+        const totalPizzas = pizzaItems.reduce((sum, pizza) => sum + (pizza.quantity || 1), 0);
+        const estimatedTime = calculateEstimatedPrepTime(totalPizzas);
+        queueCalculator.default.trackWindowOrderEstimate(docRef.id, customer.name, estimatedTime);
+      }
+      
       // Update customer statistics if we have a valid customer
       if (customer.id) {
         try {
@@ -627,10 +636,10 @@ const FirebaseDirectForm = ({ onClose }) => {
               />
               <p className="text-xs text-gray-500 mt-1">How many minutes needed to prepare this order</p>
               
-              {/* Dynamic Queue Estimate Preview */}
+              {/* Enhanced Queue Estimate Preview */}
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="text-sm font-medium text-blue-800 mb-1">
-                  Queue Estimate Preview
+                  Window Customer Estimate
                 </div>
                 <div className="text-sm text-blue-600">
                   Current queue: <span className="font-semibold">{totalPizzasInQueue} pizzas</span>
@@ -642,8 +651,22 @@ const FirebaseDirectForm = ({ onClose }) => {
                     ))}
                   </span>
                 </div>
+                
+                {/* Rush period indicator */}
+                {queueData?.rushInfo?.isRushPeriod && (
+                  <div className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded mt-1">
+                    ⚠️ Rush period ({queueData.rushInfo.timeSlot}) - Expect {queueData.rushInfo.expectedPizzas} more pizzas
+                  </div>
+                )}
+                
+                {queueData?.rushInfo?.isFridayRush && (
+                  <div className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded mt-1">
+                    🔥 Friday Rush Mode Active - Times may extend
+                  </div>
+                )}
+                
                 <div className="text-xs text-blue-500 mt-1">
-                  * Estimate updates automatically based on current kitchen workload
+                  * Includes predicted incoming orders • Updates automatically
                 </div>
               </div>
             </div>

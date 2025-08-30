@@ -16,6 +16,7 @@ import {
   getDocs, 
   query, 
   orderBy, 
+  limit,
   onSnapshot,
   serverTimestamp,
   enableIndexedDbPersistence
@@ -53,6 +54,7 @@ try {
 // Collection references
 const ORDERS_COLLECTION = 'orders';
 const ARCHIVED_ORDERS_COLLECTION = 'archived-orders';
+const WASTED_ORDERS_COLLECTION = 'wasted-orders';
 const INVENTORY_COLLECTION = 'inventory';
 
 // Helper logging functions
@@ -344,6 +346,251 @@ export const getArchivedOrders = async () => {
   }
 };
 
+// ========== Waste Management Operations ==========
+
+/**
+ * Mark an entire order as wasted
+ * @param {string} orderId - The order ID to mark as wasted
+ * @param {Object} wasteData - Waste information (reason, details, wastedBy)
+ * @returns {Promise<Object>} Result of the waste operation
+ */
+export const markOrderAsWaste = async (orderId, wasteData) => {
+  try {
+    log(`Marking order ${orderId} as waste:`, wasteData);
+    
+    // Get the order
+    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+    const orderSnap = await getDoc(orderRef);
+    
+    if (!orderSnap.exists()) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+    
+    const orderData = orderSnap.data();
+    
+    // Create waste entry
+    const wastedOrderData = {
+      ...orderData,
+      originalOrderId: orderId,
+      wasteStatus: 'wasted',
+      wasteReason: wasteData.reason,
+      wasteDetails: wasteData.details || '',
+      wasteTimestamp: new Date().toISOString(),
+      wastedBy: wasteData.wastedBy || 'Unknown',
+      wasteType: 'full_order', // Full order vs individual pizza
+      wasteValue: orderData.totalAmount || 0
+    };
+    
+    // Add to wasted collection
+    const wastedRef = collection(db, WASTED_ORDERS_COLLECTION);
+    const wastedDocRef = await addDoc(wastedRef, wastedOrderData);
+    
+    // Delete the original order
+    await deleteDoc(orderRef);
+    
+    log(`Order ${orderId} marked as waste with waste ID: ${wastedDocRef.id}`);
+    
+    return {
+      success: true,
+      originalId: orderId,
+      wastedId: wastedDocRef.id,
+      wasteValue: wastedOrderData.wasteValue
+    };
+  } catch (error) {
+    errorLog(`Error marking order ${orderId} as waste:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Mark specific pizzas in an order as wasted
+ * @param {string} orderId - The order ID
+ * @param {Array} pizzaIndexes - Array of pizza indexes to mark as wasted
+ * @param {Object} wasteData - Waste information (reason, details, wastedBy)
+ * @returns {Promise<Object>} Result of the waste operation
+ */
+export const markPizzasAsWaste = async (orderId, pizzaIndexes, wasteData) => {
+  try {
+    log(`Marking pizzas ${pizzaIndexes.join(', ')} in order ${orderId} as waste:`, wasteData);
+    
+    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+    const orderSnap = await getDoc(orderRef);
+    
+    if (!orderSnap.exists()) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+    
+    const orderData = orderSnap.data();
+    const pizzas = orderData.pizzas || [];
+    
+    // Calculate waste value
+    let wasteValue = 0;
+    const wastedPizzas = [];
+    
+    pizzaIndexes.forEach(index => {
+      if (index < pizzas.length) {
+        const pizza = pizzas[index];
+        wasteValue += pizza.totalPrice || 0;
+        wastedPizzas.push({
+          ...pizza,
+          pizzaIndex: index,
+          wasteReason: wasteData.reason,
+          wasteDetails: wasteData.details || '',
+          wasteTimestamp: new Date().toISOString(),
+          wastedBy: wasteData.wastedBy || 'Unknown'
+        });
+      }
+    });
+    
+    // Create waste entry for the pizzas
+    const wastedPizzaData = {
+      originalOrderId: orderId,
+      customerName: orderData.customerName,
+      orderTime: orderData.orderTime,
+      platform: orderData.platform,
+      wasteStatus: 'wasted',
+      wasteReason: wasteData.reason,
+      wasteDetails: wasteData.details || '',
+      wasteTimestamp: new Date().toISOString(),
+      wastedBy: wasteData.wastedBy || 'Unknown',
+      wasteType: 'partial_pizzas',
+      wastedPizzas: wastedPizzas,
+      wasteValue: wasteValue
+    };
+    
+    // Add to wasted collection
+    const wastedRef = collection(db, WASTED_ORDERS_COLLECTION);
+    const wastedDocRef = await addDoc(wastedRef, wastedPizzaData);
+    
+    // Update the original order - remove wasted pizzas and update cooked array
+    const remainingPizzas = pizzas.filter((_, index) => !pizzaIndexes.includes(index));
+    const remainingCooked = (orderData.cooked || []).filter((_, index) => !pizzaIndexes.includes(index));
+    
+    if (remainingPizzas.length === 0) {
+      // If no pizzas left, delete the entire order
+      await deleteDoc(orderRef);
+      log(`Order ${orderId} completely wasted - deleted from orders`);
+    } else {
+      // Update order with remaining pizzas
+      const updatedTotalAmount = remainingPizzas.reduce((sum, pizza) => sum + (pizza.totalPrice || 0), 0);
+      
+      await updateDoc(orderRef, {
+        pizzas: remainingPizzas,
+        cooked: remainingCooked,
+        totalAmount: updatedTotalAmount,
+        updatedAt: new Date().toISOString(),
+        hasWastedItems: true
+      });
+      
+      log(`Updated order ${orderId} with ${remainingPizzas.length} remaining pizzas`);
+    }
+    
+    return {
+      success: true,
+      originalId: orderId,
+      wastedId: wastedDocRef.id,
+      wasteValue: wasteValue,
+      remainingPizzas: remainingPizzas.length
+    };
+  } catch (error) {
+    errorLog(`Error marking pizzas as waste in order ${orderId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Get wasted orders/items
+ * @param {Object} options - Query options (dateRange, limit)
+ * @returns {Promise<Array>} Array of wasted items
+ */
+export const getWastedOrders = async (options = {}) => {
+  try {
+    log('Fetching wasted orders');
+    
+    const wastedRef = collection(db, WASTED_ORDERS_COLLECTION);
+    let q = query(wastedRef, orderBy('wasteTimestamp', 'desc'));
+    
+    if (options.limit) {
+      q = query(q, limit(options.limit));
+    }
+    
+    const snapshot = await getDocs(q);
+    
+    const wastedOrders = [];
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      wastedOrders.push({ id: doc.id, ...data });
+    });
+    
+    log(`Retrieved ${wastedOrders.length} wasted items`);
+    return wastedOrders;
+  } catch (error) {
+    errorLog("Error fetching wasted orders:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get waste analytics for a date range
+ * @param {Object} dateRange - Start and end dates
+ * @returns {Promise<Object>} Waste analytics data
+ */
+export const getWasteAnalytics = async (dateRange = {}) => {
+  try {
+    log('Calculating waste analytics');
+    
+    const wastedOrders = await getWastedOrders();
+    
+    // Filter by date range if provided
+    let filteredWaste = wastedOrders;
+    if (dateRange.start || dateRange.end) {
+      filteredWaste = wastedOrders.filter(item => {
+        const wasteDate = new Date(item.wasteTimestamp);
+        if (dateRange.start && wasteDate < new Date(dateRange.start)) return false;
+        if (dateRange.end && wasteDate > new Date(dateRange.end)) return false;
+        return true;
+      });
+    }
+    
+    // Calculate analytics
+    const totalWastedItems = filteredWaste.length;
+    const totalWasteValue = filteredWaste.reduce((sum, item) => sum + (item.wasteValue || 0), 0);
+    
+    // Group by reason
+    const wasteByReason = {};
+    filteredWaste.forEach(item => {
+      const reason = item.wasteReason || 'Unknown';
+      if (!wasteByReason[reason]) {
+        wasteByReason[reason] = { count: 0, value: 0 };
+      }
+      wasteByReason[reason].count += 1;
+      wasteByReason[reason].value += item.wasteValue || 0;
+    });
+    
+    // Group by date for trend analysis
+    const wasteByDate = {};
+    filteredWaste.forEach(item => {
+      const date = new Date(item.wasteTimestamp).toDateString();
+      if (!wasteByDate[date]) {
+        wasteByDate[date] = { count: 0, value: 0 };
+      }
+      wasteByDate[date].count += 1;
+      wasteByDate[date].value += item.wasteValue || 0;
+    });
+    
+    return {
+      totalWastedItems,
+      totalWasteValue,
+      wasteByReason,
+      wasteByDate,
+      averageWastePerItem: totalWastedItems > 0 ? totalWasteValue / totalWastedItems : 0
+    };
+  } catch (error) {
+    errorLog("Error calculating waste analytics:", error);
+    throw error;
+  }
+};
+
 /**
  * Subscribe to real-time updates for orders
  * @param {Function} callback - Function to call with updated orders array
@@ -518,7 +765,7 @@ export const subscribeToInventory = (callback) => {
 };
 
 // Export the Firebase app and Firestore db for direct access if needed
-export { app, db, ORDERS_COLLECTION, ARCHIVED_ORDERS_COLLECTION, INVENTORY_COLLECTION };
+export { app, db, ORDERS_COLLECTION, ARCHIVED_ORDERS_COLLECTION, WASTED_ORDERS_COLLECTION, INVENTORY_COLLECTION };
 
 // Export as default object - ensure we include db for direct access if needed
 const FirebaseService = {
@@ -536,6 +783,11 @@ const FirebaseService = {
   getArchivedOrders,
   subscribeToOrders,
   subscribeToOrder,
+  // Waste management functions
+  markOrderAsWaste,
+  markPizzasAsWaste,
+  getWastedOrders,
+  getWasteAnalytics,
   // Inventory functions
   getInventory,
   updateInventory,

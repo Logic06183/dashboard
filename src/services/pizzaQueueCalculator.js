@@ -12,6 +12,9 @@ class PizzaQueueCalculator {
     this.subscribers = new Set();
     this.unsubscribeFromOrders = null;
     this.initialized = false;
+    this.historicalData = this.loadHistoricalData();
+    this.orderEstimates = new Map(); // Track estimates for window orders
+    this.delayThreshold = 15; // Minutes - notify if estimate changes by this much
   }
 
   getDefaultSettings() {
@@ -19,7 +22,99 @@ class PizzaQueueCalculator {
       basePrepTimePerPizza: 10, // minutes
       pizzaCapacity: 3, // simultaneous pizzas
       fridayRushMode: false, // 1.5x multiplier
-      rushMultiplier: 1.5
+      rushMultiplier: 1.5,
+      predictiveEnabled: true, // Use historical data for predictions
+      rushHourMultiplier: 1.3 // Additional multiplier for known rush periods
+    };
+  }
+
+  /**
+   * Load historical order pattern data
+   */
+  loadHistoricalData() {
+    try {
+      const saved = localStorage.getItem('kitchenHistoricalData');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('[QUEUE CALCULATOR] Error loading historical data:', error);
+    }
+    
+    // Default historical patterns based on typical pizzeria data
+    return {
+      hourlyPatterns: {
+        // Format: { hour: { avgOrders: number, avgPizzas: number, rushPeriod: boolean } }
+        17: { avgOrders: 15, avgPizzas: 25, rushPeriod: true }, // 5-6pm
+        18: { avgOrders: 20, avgPizzas: 35, rushPeriod: true }, // 6-7pm
+        19: { avgOrders: 18, avgPizzas: 30, rushPeriod: true }, // 7-8pm
+        20: { avgOrders: 12, avgPizzas: 20, rushPeriod: false }, // 8-9pm
+        21: { avgOrders: 8, avgPizzas: 15, rushPeriod: false }   // 9-10pm
+      },
+      fridayMultiplier: 1.4, // Fridays are 40% busier
+      weekendMultiplier: 1.2, // Weekends are 20% busier
+      lastUpdated: new Date().toISOString()
+    };
+  }
+
+  /**
+   * Save historical data to localStorage
+   */
+  saveHistoricalData() {
+    try {
+      localStorage.setItem('kitchenHistoricalData', JSON.stringify(this.historicalData));
+    } catch (error) {
+      console.error('[QUEUE CALCULATOR] Error saving historical data:', error);
+    }
+  }
+
+  /**
+   * Get current time slot info (hour of day)
+   */
+  getCurrentTimeSlot() {
+    const now = new Date();
+    const hour = now.getHours();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 5 = Friday, 6 = Saturday
+    const isFriday = dayOfWeek === 5;
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    
+    return {
+      hour,
+      isFriday,
+      isWeekend,
+      isRushPeriod: this.historicalData.hourlyPatterns[hour]?.rushPeriod || false
+    };
+  }
+
+  /**
+   * Predict expected orders in the next hour based on historical data
+   */
+  predictNextHourOrders() {
+    const timeSlot = this.getCurrentTimeSlot();
+    const hourPattern = this.historicalData.hourlyPatterns[timeSlot.hour];
+    
+    if (!hourPattern) {
+      return { expectedOrders: 0, expectedPizzas: 0, confidence: 'low' };
+    }
+    
+    let expectedOrders = hourPattern.avgOrders;
+    let expectedPizzas = hourPattern.avgPizzas;
+    
+    // Apply day-of-week multipliers
+    if (timeSlot.isFriday) {
+      expectedOrders *= this.historicalData.fridayMultiplier;
+      expectedPizzas *= this.historicalData.fridayMultiplier;
+    } else if (timeSlot.isWeekend) {
+      expectedOrders *= this.historicalData.weekendMultiplier;
+      expectedPizzas *= this.historicalData.weekendMultiplier;
+    }
+    
+    return {
+      expectedOrders: Math.round(expectedOrders),
+      expectedPizzas: Math.round(expectedPizzas),
+      confidence: hourPattern ? 'high' : 'low',
+      timeSlot: timeSlot.hour,
+      isRushPeriod: timeSlot.isRushPeriod
     };
   }
 
@@ -142,7 +237,7 @@ class PizzaQueueCalculator {
   }
 
   /**
-   * Calculate estimated prep time for a new order
+   * Calculate estimated prep time with predictive analysis
    */
   calculateEstimatedPrepTime(additionalPizzas = 0) {
     const totalPizzasInQueue = this.getTotalPizzasInQueue() + additionalPizzas;
@@ -151,11 +246,28 @@ class PizzaQueueCalculator {
       return this.settings.basePrepTimePerPizza;
     }
 
+    // Get predictive data if enabled
+    let predictedPizzas = 0;
+    if (this.settings.predictiveEnabled) {
+      const prediction = this.predictNextHourOrders();
+      // Add a portion of predicted pizzas based on confidence
+      const confidenceMultiplier = prediction.confidence === 'high' ? 0.3 : 0.1;
+      predictedPizzas = Math.round(prediction.expectedPizzas * confidenceMultiplier);
+    }
+
+    const totalEstimatedPizzas = totalPizzasInQueue + predictedPizzas;
+    
     // Calculate number of batches needed
-    const batches = Math.ceil(totalPizzasInQueue / this.settings.pizzaCapacity);
+    const batches = Math.ceil(totalEstimatedPizzas / this.settings.pizzaCapacity);
     
     // Base time calculation
     let estimatedTime = batches * this.settings.basePrepTimePerPizza;
+    
+    // Apply rush period multiplier
+    const timeSlot = this.getCurrentTimeSlot();
+    if (timeSlot.isRushPeriod && this.settings.predictiveEnabled) {
+      estimatedTime *= this.settings.rushHourMultiplier;
+    }
     
     // Apply Friday rush mode multiplier if enabled
     if (this.settings.fridayRushMode) {
@@ -166,19 +278,154 @@ class PizzaQueueCalculator {
   }
 
   /**
-   * Get queue overview data
+   * Calculate window customer estimate with detailed breakdown
+   */
+  calculateWindowCustomerEstimate(orderPizzas = 1) {
+    const currentQueue = this.getTotalPizzasInQueue();
+    const prediction = this.predictNextHourOrders();
+    const timeSlot = this.getCurrentTimeSlot();
+    
+    // Base calculation without predictions
+    const baseEstimate = this.calculateEstimatedPrepTime(orderPizzas);
+    
+    // Enhanced calculation with predictions
+    const predictiveEstimate = this.calculateEstimatedPrepTime(orderPizzas);
+    
+    return {
+      baseEstimate,
+      predictiveEstimate,
+      currentQueue,
+      expectedIncomingPizzas: prediction.expectedPizzas,
+      isRushPeriod: timeSlot.isRushPeriod,
+      isFridayRush: timeSlot.isFriday && this.settings.fridayRushMode,
+      confidence: prediction.confidence,
+      breakdown: {
+        currentPizzasAhead: currentQueue,
+        yourPizzas: orderPizzas,
+        predictedIncoming: prediction.expectedPizzas,
+        timeSlot: `${timeSlot.hour}:00-${timeSlot.hour + 1}:00`
+      }
+    };
+  }
+
+  /**
+   * Track window order estimate and detect significant changes
+   */
+  trackWindowOrderEstimate(orderId, customerName, estimatedTime) {
+    const now = new Date();
+    const orderData = {
+      orderId,
+      customerName,
+      platform: 'Window',
+      originalEstimate: estimatedTime,
+      currentEstimate: estimatedTime,
+      orderTime: now.toISOString(),
+      estimatedReadyTime: new Date(now.getTime() + estimatedTime * 60000).toISOString(),
+      notificationsSent: []
+    };
+    
+    this.orderEstimates.set(orderId, orderData);
+    console.log(`[QUEUE CALCULATOR] Tracking window order ${orderId} - Est: ${estimatedTime}min`);
+  }
+
+  /**
+   * Check for significant time estimate changes and return notification data
+   */
+  checkForDelayedOrders() {
+    const delayedOrders = [];
+    
+    this.orderEstimates.forEach((orderData, orderId) => {
+      // Skip if order is no longer active
+      const currentOrder = this.orders.find(o => o.id === orderId || o.orderId === orderId);
+      if (!currentOrder || currentOrder.status === 'completed' || currentOrder.status === 'delivered') {
+        this.orderEstimates.delete(orderId);
+        return;
+      }
+      
+      // Calculate current estimate for this order
+      const currentEstimate = this.getOrderEstimate(orderId);
+      if (!currentEstimate) return;
+      
+      const timeDifference = currentEstimate.estimatedPrepTime - orderData.originalEstimate;
+      
+      // Check if delay is significant and hasn't been notified yet
+      if (timeDifference >= this.delayThreshold) {
+        const delayMinutes = Math.round(timeDifference);
+        const notificationKey = `delay_${delayMinutes}`;
+        
+        if (!orderData.notificationsSent.includes(notificationKey)) {
+          delayedOrders.push({
+            orderId,
+            customerName: orderData.customerName,
+            originalEstimate: orderData.originalEstimate,
+            newEstimate: currentEstimate.estimatedPrepTime,
+            delayMinutes,
+            orderTime: orderData.orderTime,
+            reason: this.getDelayReason()
+          });
+          
+          // Mark this delay level as notified
+          orderData.notificationsSent.push(notificationKey);
+          orderData.currentEstimate = currentEstimate.estimatedPrepTime;
+        }
+      }
+    });
+    
+    return delayedOrders;
+  }
+
+  /**
+   * Get likely reason for current delays
+   */
+  getDelayReason() {
+    const prediction = this.predictNextHourOrders();
+    const timeSlot = this.getCurrentTimeSlot();
+    
+    if (timeSlot.isRushPeriod) {
+      return `Rush period (${timeSlot.hour}:00-${timeSlot.hour + 1}:00) - higher than normal order volume`;
+    }
+    
+    if (timeSlot.isFriday && this.settings.fridayRushMode) {
+      return 'Friday rush mode - increased order volume';
+    }
+    
+    const queueSize = this.getTotalPizzasInQueue();
+    if (queueSize > this.settings.pizzaCapacity * 3) {
+      return 'High order volume - kitchen at capacity';
+    }
+    
+    return 'Unexpected order volume increase';
+  }
+
+  /**
+   * Get queue overview data with enhanced rush period info
    */
   getQueueOverview() {
     const totalPizzasInQueue = this.getTotalPizzasInQueue();
     const activeOrdersCount = this.getActiveOrdersCount();
     const estimatedWaitTime = this.calculateEstimatedPrepTime();
+    const prediction = this.predictNextHourOrders();
+    const timeSlot = this.getCurrentTimeSlot();
+    const delayedOrders = this.checkForDelayedOrders();
 
     return {
       totalPizzasInQueue,
       activeOrdersCount,
       estimatedWaitTime,
       settings: this.getSettings(),
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
+      // Enhanced rush period data
+      rushInfo: {
+        isRushPeriod: timeSlot.isRushPeriod,
+        isFridayRush: timeSlot.isFriday && this.settings.fridayRushMode,
+        timeSlot: `${timeSlot.hour}:00-${timeSlot.hour + 1}:00`,
+        expectedOrders: prediction.expectedOrders,
+        expectedPizzas: prediction.expectedPizzas,
+        confidence: prediction.confidence
+      },
+      // Delay notifications
+      delayedOrders,
+      windowOrdersTracked: this.orderEstimates.size
     };
   }
 

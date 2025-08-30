@@ -88,6 +88,63 @@ const KitchenDisplayPage = ({ isLoading, onStatusChange, onPizzaStatusChange, on
               </div>
             </div>
           )}
+          
+          {/* Rush Period and Delay Alerts */}
+          {queueData && (
+            <div className="mt-4 space-y-2">
+              {/* Rush Period Alert */}
+              {queueData.rushInfo?.isRushPeriod && (
+                <div className="bg-orange-100 border border-orange-300 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <span className="text-orange-600 font-semibold mr-2">⚠️ RUSH PERIOD</span>
+                      <span className="text-orange-700">{queueData.rushInfo.timeSlot}</span>
+                    </div>
+                    <div className="text-sm text-orange-600">
+                      Expecting ~{queueData.rushInfo.expectedPizzas} pizzas this hour
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Window Customer Delay Notifications */}
+              {queueData.delayedOrders && queueData.delayedOrders.length > 0 && (
+                <div className="bg-red-100 border border-red-300 rounded-lg p-3">
+                  <div className="text-red-800 font-semibold mb-2">
+                    📞 WINDOW CUSTOMERS TO NOTIFY ({queueData.delayedOrders.length})
+                  </div>
+                  {queueData.delayedOrders.map(order => (
+                    <div key={order.orderId} className="bg-white rounded p-2 mb-2 border border-red-200">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold text-red-700">{order.customerName}</div>
+                          <div className="text-sm text-red-600">
+                            Original: {order.originalEstimate}min → Now: {order.newEstimate}min (+{order.delayMinutes}min)
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1">{order.reason}</div>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Order #{order.orderId.slice(-6)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              {/* Predictive Info for Staff */}
+              {queueData.rushInfo?.confidence === 'high' && (
+                <div className="bg-blue-100 border border-blue-300 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="text-blue-800 font-semibold">📊 PREDICTIVE INTEL</div>
+                    <div className="text-sm text-blue-600">
+                      Window estimates include predicted volume
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 

@@ -1,0 +1,106 @@
+# Page snapshot
+
+```yaml
+- heading "John Dough's" [level=1]
+- button:
+  - img
+- navigation:
+  - link "Dashboard":
+    - /url: /
+    - img
+    - text: Dashboard
+  - link "Customers":
+    - /url: /customers
+    - img
+    - text: Customers
+  - link "Orders":
+    - /url: /orders
+    - img
+    - text: Orders
+  - link "Inventory":
+    - /url: /inventory
+    - img
+    - text: Inventory
+  - link "Analytics":
+    - /url: /analytics
+    - img
+    - text: Analytics
+  - link "Settings":
+    - /url: /settings
+    - img
+    - text: Settings
+- banner:
+  - heading "Pizza Orders Dashboard" [level=1]
+  - button "Clear Orders"
+  - button "New Order"
+  - button:
+    - img
+- banner:
+  - heading "John Dough's Dashboard" [level=1]
+  - paragraph: Sourdough Pizza Excellence
+  - link "Firebase Test Tool":
+    - /url: /firebase-test
+  - checkbox "Show Completed Orders"
+  - text: Show Completed Orders
+  - button "Clear All Orders"
+- main:
+  - img
+  - text: "-90.3%"
+  - heading "John's Daily Sales" [level=3]
+  - paragraph: R2345.00
+  - img
+  - text: 9.0%
+  - heading "Pizza Orders" [level=3]
+  - paragraph: "9"
+  - img
+  - text: +12%
+  - heading "Most Popular Pizza" [level=3]
+  - paragraph: The Champ
+  - img
+  - text: On Track
+  - heading "Kitchen Status" [level=3]
+  - paragraph: 11 min
+  - img
+  - text: 100%
+  - heading "Pizza Completion" [level=3]
+  - paragraph: 9604/9604
+  - heading "Orders by Hour" [level=3]
+  - img: 0 1 2 3 4 5 6 7 8 9 11 13 15 17 19 21 23 0 350 700 1050 1400
+  - heading "Most Popular Pizzas" [level=3]
+  - img:
+    - img
+    - img
+    - img
+    - img
+    - img
+    - text: 1044 1014 903 590 483
+  - list:
+    - listitem:
+      - img
+      - text: PIG IN PARADISE
+    - listitem:
+      - img
+      - text: MARGIE
+    - listitem:
+      - img
+      - text: THE CHAMP
+    - listitem:
+      - img
+      - text: Margie Pizza
+    - listitem:
+      - img
+      - text: The Champ Pizza
+  - heading "Orders by Platform" [level=3]
+  - img: Uber Eats Mr D Food Staff Bolt Food 0 700 1400 2100 2800
+  - heading "Average Preparation Times" [level=3]
+  - img: 11:00 13:00 15:00 17:00 19:00 22:00 0 4 8 12 16
+  - heading "Business Insights" [level=3]
+  - heading "Peak Hours" [level=4]
+  - paragraph: "Busiest time: 18:00 Orders: 1269"
+  - heading "Best Platform" [level=4]
+  - paragraph: "Platform: Uber Eats Revenue: R782992.00"
+  - heading "Customer Base" [level=4]
+  - paragraph: "Total Customers: 2211 Avg Order Value: R260.56"
+  - paragraph: "Top Customer:"
+  - paragraph: MrD 323 orders · R96427.00 spent
+```

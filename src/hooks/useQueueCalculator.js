@@ -68,6 +68,16 @@ const useQueueCalculator = () => {
     }
   }, []);
 
+  // Get window customer estimate with detailed breakdown
+  const getWindowCustomerEstimate = useCallback((orderPizzas = 1) => {
+    try {
+      return queueCalculator.calculateWindowCustomerEstimate(orderPizzas);
+    } catch (err) {
+      console.error('Error getting window customer estimate:', err);
+      return null;
+    }
+  }, []);
+
   // Update kitchen settings
   const updateSettings = useCallback(async (newSettings) => {
     try {
@@ -154,6 +164,7 @@ const useQueueCalculator = () => {
     // Functions
     getOrderEstimate,
     calculateEstimatedPrepTime,
+    getWindowCustomerEstimate,
     updateSettings,
     getPresets,
     applyPreset,
@@ -166,7 +177,12 @@ const useQueueCalculator = () => {
     activeOrdersCount: queueData?.activeOrdersCount || 0,
     estimatedWaitTime: queueData?.estimatedWaitTime || 0,
     settings: queueData?.settings || {},
-    isRushMode: queueData?.settings?.fridayRushMode || false
+    isRushMode: queueData?.settings?.fridayRushMode || false,
+    
+    // Enhanced rush period data
+    rushInfo: queueData?.rushInfo || {},
+    delayedOrders: queueData?.delayedOrders || [],
+    windowOrdersTracked: queueData?.windowOrdersTracked || 0
   };
 };
 

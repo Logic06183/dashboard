@@ -6,6 +6,7 @@ import InventoryPage from './components/pages/InventoryPage';
 import OrdersPage from './components/pages/OrdersPage';
 import AnalyticsPage from './components/pages/AnalyticsPage';
 import SettingsPage from './components/pages/SettingsPage';
+import WasteManagementPage from './components/pages/WasteManagementPage';
 import Sidebar from './components/Sidebar';
 import HookOrderTest from './components/HookOrderTest';
 import FirebaseDirectForm from './components/FirebaseDirectForm';
@@ -104,6 +105,7 @@ function App() {
                 onArchiveOrder={handleArchiveOrder}
               />} />
               <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/waste" element={<WasteManagementPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/cleanup" element={<OrderCleanupUtility />} />
             </Routes>
