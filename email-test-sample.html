@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Daily Stock Report Sample - John Dough's Pizzeria</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .alert { background: #ffebee; border-left: 4px solid #f44336; padding: 15px; margin: 15px 0; }
+        .warning { background: #fff8e1; border-left: 4px solid #ff9800; padding: 15px; margin: 15px 0; }
+        .success { background: #e8f5e8; border-left: 4px solid #4caf50; padding: 15px; margin: 15px 0; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: #f9f9f9; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 2em; font-weight: bold; color: #2196f3; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background: #f2f2f2; font-weight: bold; }
+        .footer { margin-top: 30px; padding: 20px; background: #f4f4f4; border-radius: 8px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Daily Stock Report</h1>
+        <p><strong>John Dough's Sourdough Pizzeria</strong><br>
+        Linden, Johannesburg, South Africa</p>
+        <p>Date: Thursday, 12 September 2025<br>
+        Generated: 22:00 SAST</p>
+    </div>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-number">R1,245.50</div>
+            <div>Starting Stock Value</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">R1,087.25</div>
+            <div>Ending Stock Value</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">R158.25</div>
+            <div>Daily Usage Cost</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">87%</div>
+            <div>Efficiency Score</div>
+        </div>
+    </div>
+
+    <div class="alert">
+        <h3>🚨 CRITICAL - OUT OF STOCK (2 items)</h3>
+        <ul>
+            <li><strong>Mushrooms:</strong> 0g (need to reorder immediately)</li>
+            <li><strong>Bell Peppers:</strong> 0g (need to reorder immediately)</li>
+        </ul>
+    </div>
+
+    <div class="warning">
+        <h3>⚠️ LOW STOCK (3 items)</h3>
+        <ul>
+            <li><strong>Sourdough Dough:</strong> 5 balls (threshold: 10 balls)</li>
+            <li><strong>Pepperoni:</strong> 50g (threshold: 100g)</li>
+            <li><strong>Pizza Sauce:</strong> 200ml (threshold: 500ml)</li>
+        </ul>
+    </div>
+
+    <div class="success">
+        <h3>📈 TODAY'S PERFORMANCE</h3>
+        <ul>
+            <li>Orders processed: <strong>18</strong></li>
+            <li>Pizzas made: <strong>31</strong></li>
+            <li>Drinks served: <strong>45</strong></li>
+            <li>Average order value: <strong>R187.50</strong></li>
+        </ul>
+    </div>
+
+    <h3>🏆 Top Used Ingredients Today</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Ingredient</th>
+                <th>Amount Used</th>
+                <th>Unit</th>
+                <th>Estimated Cost</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Mozzarella Cheese</td>
+                <td>2,914</td>
+                <td>g</td>
+                <td>R58.28</td>
+            </tr>
+            <tr>
+                <td>Sourdough Dough</td>
+                <td>31</td>
+                <td>balls</td>
+                <td>R77.50</td>
+            </tr>
+            <tr>
+                <td>Pizza Sauce</td>
+                <td>1,860</td>
+                <td>ml</td>
+                <td>R9.30</td>
+            </tr>
+            <tr>
+                <td>Pepperoni</td>
+                <td>1,184</td>
+                <td>g</td>
+                <td>R14.21</td>
+            </tr>
+            <tr>
+                <td>Red Onions</td>
+                <td>248</td>
+                <td>g</td>
+                <td>R1.24</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>📋 SHOPPING LIST FOR TOMORROW</h3>
+    <div class="warning">
+        <p><strong>Priority Items (OUT OF STOCK):</strong></p>
+        <ul>
+            <li>Mushrooms - Need 500g minimum</li>
+            <li>Bell Peppers - Need 500g minimum</li>
+        </ul>
+        
+        <p><strong>Low Stock Items:</strong></p>
+        <ul>
+            <li>Sourdough Dough - Current: 5 balls, Need: 20+ balls</li>
+            <li>Pepperoni - Current: 50g, Need: 500g</li>
+            <li>Pizza Sauce - Current: 200ml, Need: 2 liters</li>
+        </ul>
+    </div>
+
+    <h3>💡 RECOMMENDATIONS</h3>
+    <ul>
+        <li><strong>Immediate Action Required:</strong> Order mushrooms and bell peppers today - we're completely out!</li>
+        <li><strong>Weekend Prep:</strong> Consider increasing dough ball prep for weekend rush</li>
+        <li><strong>Cost Optimization:</strong> Today's efficiency of 87% is good, but we can reduce waste</li>
+        <li><strong>Popular Items:</strong> High mozzarella usage indicates cheese-heavy pizzas are selling well</li>
+    </ul>
+
+    <div class="footer">
+        <p><strong>This report was automatically generated by John Dough's Pizza Dashboard at 22:00 SAST</strong></p>
+        <p>For detailed analysis, access the full dashboard at: <a href="https://pizza-dashboard-92057.web.app">https://pizza-dashboard-92057.web.app</a></p>
+        <p>Questions? Contact the team or check the inventory management section in the dashboard.</p>
+        <hr>
+        <p style="font-size: 0.8em; color: #666;">
+            🤖 Generated with Claude Code | Recipients: craigparker6@gmail.com, parkerjaneandcourt@gmail.com
+        </p>
+    </div>
+</body>
+</html>

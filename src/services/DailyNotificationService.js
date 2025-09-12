@@ -10,7 +10,7 @@ import FirebaseService from './FirebaseService';
 
 class DailyNotificationService {
   constructor() {
-    this.managerEmail = 'craigparker6@gmail.com'; // Test email for Craig
+    this.managerEmail = 'craigparker6@gmail.com,parkerjaneandcourt@gmail.com'; // Test emails
     this.isEnabled = true;
     this.notificationTime = { hour: 22, minute: 0 }; // 10 PM SAST
   }
@@ -91,20 +91,28 @@ class DailyNotificationService {
         notificationData
       );
       
-      // Send email notification
-      const emailResult = await EmailNotificationService.sendDailyStockReport(
-        emailReport,
-        this.managerEmail,
-        'Mom'
-      );
+      // Handle multiple email addresses
+      const emailAddresses = this.managerEmail.split(',').map(email => email.trim());
+      const emailResults = [];
+      
+      // Send to each email address
+      for (const email of emailAddresses) {
+        const emailResult = await EmailNotificationService.sendDailyStockReport(
+          emailReport,
+          email,
+          email.includes('craig') ? 'Craig' : email.includes('parker') ? 'Parker' : 'Manager'
+        );
+        emailResults.push({ email, result: emailResult });
+      }
       
       // Log notification in Firebase for record keeping
-      await this.logNotification(notificationData, emailResult);
+      await this.logNotification(notificationData, emailResults);
       
       return {
         success: true,
         notification: notificationData,
-        emailResult,
+        emailResults,
+        recipientCount: emailAddresses.length,
         timestamp: new Date().toISOString()
       };
       
