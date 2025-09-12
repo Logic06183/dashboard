@@ -1,11 +1,10 @@
-// Pizza ingredients database
+// Pizza ingredients database - Updated with real measurements from John Dough's team
 export const PIZZA_INGREDIENTS = {
   base: {
     'sourdough_dough': { unit: 'ball', amount: 1, category: 'dough', cost: 12.50 },
-    'tomato_sauce': { unit: 'ml', amount: 80, category: 'sauce', cost: 0.05 },
-    'mozzarella_cheese': { unit: 'g', amount: 100, category: 'cheese', cost: 0.12 },
-    'garlic_butter': { unit: 'g', amount: 30, category: 'sauce', cost: 0.10 }
+    // Note: Pizza sauce and mozzarella amounts vary per pizza, handled in pizza-specific ingredients
   },
+  
   pizzas: {
     // Non-pizza items
     'DOUGH BALLS': {
@@ -17,217 +16,215 @@ export const PIZZA_INGREDIENTS = {
     'STRETCHED BASE WITH SAUCE': {
       ingredients: {
         'sourdough_dough': { unit: 'ball', amount: 1, category: 'dough', cost: 12.50 },
-        'tomato_sauce': { unit: 'ml', amount: 80, category: 'sauce', cost: 0.05 }
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
       }
     },
-    'Margherita': {
-      ingredients: {
-        'fresh_basil': { unit: 'g', amount: 10, category: 'herb', cost: 0.20 },
-        'olive_oil': { unit: 'ml', amount: 10, category: 'oil', cost: 0.15 }
-      }
-    },
-    'Pepperoni': {
-      ingredients: {
-        'pepperoni': { unit: 'g', amount: 60, category: 'meat', cost: 0.18 }
-      }
-    },
-    'Vegetarian': {
-      ingredients: {
-        'mushrooms': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.08 },
-        'bell_peppers': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.06 },
-        'red_onion': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.04 },
-        'olives': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.10 }
-      }
-    },
-    'Hawaiian': {
-      ingredients: {
-        'ham': { unit: 'g', amount: 50, category: 'meat', cost: 0.15 },
-        'pineapple': { unit: 'g', amount: 50, category: 'fruit', cost: 0.08 }
-      }
-    },
-
-    // John Dough's specialty pizzas
-    'Mushroom Cloud Pizza': {
-      ingredients: {
-        'mushrooms': { unit: 'g', amount: 80, category: 'vegetable', cost: 0.16 },
-        'caramelised_onions': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.08 },
-        'goat_cheese': { unit: 'g', amount: 50, category: 'cheese', cost: 0.25 },
-        'banhoek_chilli_oil': { unit: 'ml', amount: 10, category: 'oil', cost: 0.20 },
-        'sunflower_seeds': { unit: 'g', amount: 15, category: 'topping', cost: 0.10 }
-      }
-    },
-
-    'Quattro Formaggi': {
-      ingredients: {
-        'mozzarella_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.10 },
-        'provolone_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.20 },
-        'blue_cheese': { unit: 'g', amount: 30, category: 'cheese', cost: 0.25 },
-        'parmesan_cheese': { unit: 'g', amount: 25, category: 'cheese', cost: 0.18 },
-        'red_onion': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.05 },
-        'fig_jam': { unit: 'ml', amount: 15, category: 'sauce', cost: 0.20 }
-      }
-    },
-    'The Champ': {
-      ingredients: {
-        'chicken': { unit: 'g', amount: 60, category: 'meat', cost: 0.20 },
-        'bacon': { unit: 'g', amount: 30, category: 'meat', cost: 0.14 },
-        'avocado': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.25 },
-        'ranch_sauce': { unit: 'ml', amount: 20, category: 'sauce', cost: 0.08 }
-      }
-    },
-    'Sourdough Special': {
-      ingredients: {
-        'prosciutto': { unit: 'g', amount: 40, category: 'meat', cost: 0.35 },
-        'arugula': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.12 },
-        'cherry_tomatoes': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.10 },
-        'balsamic_glaze': { unit: 'ml', amount: 15, category: 'sauce', cost: 0.15 }
-      }
-    },
-    'Spud Pizza': {
-      ingredients: {
-        'potato': { unit: 'g', amount: 80, category: 'vegetable', cost: 0.08 },
-        'onion': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.04 },
-        'rosemary': { unit: 'g', amount: 5, category: 'herb', cost: 0.10 },
-        'chilli_oil': { unit: 'ml', amount: 10, category: 'oil', cost: 0.15 },
-        'parmesan_cheese': { unit: 'g', amount: 25, category: 'cheese', cost: 0.18 }
-      }
-    },
-    'Vegan Delight': {
-      ingredients: {
-        'vegan_cheese': { unit: 'g', amount: 80, category: 'cheese', cost: 0.25 },
-        'spinach': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.08 },
-        'roasted_peppers': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.12 },
-        'artichoke_hearts': { unit: 'g', amount: 35, category: 'vegetable', cost: 0.18 },
-        'plant_based_sausage': { unit: 'g', amount: 50, category: 'meat', cost: 0.30 }
-      }
-    },
+    
+    // Real measurements from John Dough's team
     'THE CHAMP': {
       ingredients: {
-        'pepperoni': { unit: 'g', amount: 60, category: 'meat', cost: 0.18 },
-        'sourdough': { unit: 'g', amount: 50, category: 'dough', cost: 0.15 },
-        'red_onion': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.05 },
-        'parmesan': { unit: 'g', amount: 25, category: 'cheese', cost: 0.20 }
-      }
-    },
-    'LEKKER\'IZZA': {
-      ingredients: {
-        'anchovies': { unit: 'g', amount: 30, category: 'fish', cost: 0.25 },
-        'olives': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.15 },
-        'mozzarella': { unit: 'g', amount: 80, category: 'cheese', cost: 0.22 },
-        'basil': { unit: 'g', amount: 10, category: 'herb', cost: 0.10 }
-      }
-    },
-    'CHICK TICK BOOM!': {
-      ingredients: {
-        'chicken_tikka': { unit: 'g', amount: 70, category: 'meat', cost: 0.25 },
-        'peppadew': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.15 },
-        'coriander': { unit: 'g', amount: 10, category: 'herb', cost: 0.12 }
-      }
-    },
-    'MISH-MASH': {
-      ingredients: {
-        'parma_ham': { unit: 'g', amount: 50, category: 'meat', cost: 0.30 },
-        'fig_jam': { unit: 'ml', amount: 30, category: 'sauce', cost: 0.20 },
-        'goats_cheese': { unit: 'g', amount: 40, category: 'cheese', cost: 0.25 },
-        'rocket': { unit: 'g', amount: 15, category: 'vegetable', cost: 0.10 }
-      }
-    },
-    'POPPA\'S': {
-      ingredients: {
-        'bacon': { unit: 'g', amount: 40, category: 'meat', cost: 0.20 },
-        'pepperoni': { unit: 'g', amount: 40, category: 'meat', cost: 0.18 },
-        'biltong': { unit: 'g', amount: 30, category: 'meat', cost: 0.35 },
-        'peppadews': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.12 },
-        'mozzarella': { unit: 'g', amount: 60, category: 'cheese', cost: 0.15 },
-        'red_onion': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.05 },
-        'chutney': { unit: 'ml', amount: 15, category: 'sauce', cost: 0.10 },
-        'feta': { unit: 'g', amount: 30, category: 'cheese', cost: 0.18 }
+        'pepperoni': { unit: 'g', amount: 74, category: 'meat', cost: 0.18 },
+        'red_onion': { unit: 'g', amount: 8, category: 'vegetable', cost: 0.04 },
+        'parmesan': { unit: 'g', amount: 8, category: 'cheese', cost: 0.18 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
       }
     },
     'PIG IN PARADISE': {
       ingredients: {
-        'cheese': { unit: 'g', amount: 70, category: 'cheese', cost: 0.16 },
-        'bacon': { unit: 'g', amount: 50, category: 'meat', cost: 0.22 },
-        'caramelised_pineapple': { unit: 'g', amount: 50, category: 'fruit', cost: 0.15 },
-        'sourdough_base': { unit: 'ball', amount: 1, category: 'dough', cost: 0.25 }
-      }
-    },
-    'ARTICHOKE & HAM': {
-      ingredients: {
-        'mozzarella': { unit: 'g', amount: 60, category: 'cheese', cost: 0.15 },
-        'ham': { unit: 'g', amount: 50, category: 'meat', cost: 0.18 },
-        'mushrooms': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.12 },
-        'artichoke': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.22 },
-        'olives': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.15 }
-      }
-    },
-    'GLAZE OF GLORY': {
-      ingredients: {
-        'balsamic_glaze': { unit: 'ml', amount: 20, category: 'sauce', cost: 0.18 },
-        'bacon': { unit: 'g', amount: 50, category: 'meat', cost: 0.22 },
-        'feta': { unit: 'g', amount: 40, category: 'cheese', cost: 0.20 },
-        'red_onion': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.05 }
-      }
-    },
-    'MEDITERRANEAN': {
-      ingredients: {
-        'mushrooms': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.12 },
-        'zucchini': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.08 },
-        'olives': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.15 },
-        'sun_dried_tomatoes': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.20 },
-        'herbs': { unit: 'g', amount: 5, category: 'herb', cost: 0.10 },
-        'hummus': { unit: 'ml', amount: 30, category: 'sauce', cost: 0.16 },
-        'olive_oil': { unit: 'ml', amount: 15, category: 'oil', cost: 0.08 }
+        'bacon': { unit: 'g', amount: 64, category: 'meat', cost: 0.14 },
+        'caramelised_pineapple': { unit: 'g', amount: 130, category: 'fruit', cost: 0.08 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
       }
     },
     'MARGIE': {
       ingredients: {
-        'mozzarella': { unit: 'g', amount: 80, category: 'cheese', cost: 0.18 },
-        'basil': { unit: 'g', amount: 10, category: 'herb', cost: 0.10 },
-        'tomato_sauce': { unit: 'ml', amount: 80, category: 'sauce', cost: 0.05 }
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'fresh_mozzarella': { unit: 'g', amount: 80, category: 'cheese', cost: 0.15 },
+        'basil': { unit: 'g', amount: 3.5, category: 'herb', cost: 0.20 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
       }
     },
-    'OWEN!': {
+    'MUSHROOM CLOUD': {
       ingredients: {
-        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.08 },
-        'shredded_cheese': { unit: 'g', amount: 100, category: 'cheese', cost: 0.22 },
-        'sourdough_base': { unit: 'ball', amount: 1, category: 'dough', cost: 0.25 }
+        'mushrooms': { unit: 'g', amount: 86, category: 'vegetable', cost: 0.08 },
+        'goats_cheese': { unit: 'g', amount: 30, category: 'cheese', cost: 0.25 },
+        'sunflower_seeds': { unit: 'g', amount: 2, category: 'topping', cost: 0.10 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'caramelised_onions': { unit: 'g', amount: 100, category: 'vegetable', cost: 0.08 },
+        'chilli_oil': { unit: 'ml', amount: 2, category: 'oil', cost: 0.15 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
       }
     },
-    'CAPRESE': {
+    'SPUD': {
       ingredients: {
-        'mozzarella': { unit: 'g', amount: 80, category: 'cheese', cost: 0.20 },
-        'tomatoes': { unit: 'g', amount: 60, category: 'vegetable', cost: 0.10 },
-        'balsamic_glaze': { unit: 'ml', amount: 15, category: 'sauce', cost: 0.15 },
-        'basil_pesto': { unit: 'ml', amount: 20, category: 'sauce', cost: 0.22 }
+        'potato_slices': { unit: 'g', amount: 100, category: 'vegetable', cost: 0.08 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'caramelised_onions': { unit: 'g', amount: 76, category: 'vegetable', cost: 0.08 },
+        'chilli_oil': { unit: 'ml', amount: 2, category: 'oil', cost: 0.15 },
+        'parmesan': { unit: 'g', amount: 8, category: 'cheese', cost: 0.18 }
+      }
+    },
+    'MISH-MASH': {
+      ingredients: {
+        'parma_ham': { unit: 'g', amount: 40, category: 'meat', cost: 0.35 },
+        'fig_preserve': { unit: 'g', amount: 45, category: 'spread', cost: 0.20 },
+        'goats_cheese': { unit: 'g', amount: 30, category: 'cheese', cost: 0.25 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'rocket': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.12 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
+      }
+    },
+    'LEKKER\'IZZA': {
+      ingredients: {
+        'bacon': { unit: 'g', amount: 64, category: 'meat', cost: 0.14 },
+        'pepperoni': { unit: 'g', amount: 64, category: 'meat', cost: 0.18 },
+        'peppadews': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.15 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'feta': { unit: 'g', amount: 32, category: 'cheese', cost: 0.18 },
+        'red_onion': { unit: 'g', amount: 8, category: 'vegetable', cost: 0.04 },
+        'biltong': { unit: 'g', amount: 24, category: 'meat', cost: 0.35 },
+        'chutney': { unit: 'g', amount: 12, category: 'sauce', cost: 0.10 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
       }
     },
     'VEGAN HARVEST': {
       ingredients: {
-        'mushrooms': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.12 },
-        'zucchini': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.08 },
-        'olives': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.15 },
-        'sun_dried_tomatoes': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.20 },
-        'herbs': { unit: 'g', amount: 5, category: 'herb', cost: 0.10 },
-        'hummus': { unit: 'ml', amount: 30, category: 'sauce', cost: 0.16 },
-        'olive_oil': { unit: 'ml', amount: 15, category: 'oil', cost: 0.08 }
+        'mushrooms': { unit: 'g', amount: 55, category: 'vegetable', cost: 0.08 },
+        'baby_marrow': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.08 },
+        'kalamata_olives': { unit: 'g', amount: 50, category: 'vegetable', cost: 0.10 },
+        'sundried_tomatoes': { unit: 'g', amount: 60, category: 'vegetable', cost: 0.20 },
+        'hummus': { unit: 'g', amount: 56, category: 'spread', cost: 0.16 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
+        'olive_oil': { unit: 'ml', amount: 2, category: 'oil', cost: 0.15 }
       }
     },
-    'VEG SPECIAL': {
+    'POPPA\'S': {
       ingredients: {
-        'mushrooms': { unit: 'g', amount: 50, category: 'vegetable', cost: 0.15 },
-        'bell_peppers': { unit: 'g', amount: 45, category: 'vegetable', cost: 0.12 },
-        'olives': { unit: 'g', amount: 25, category: 'vegetable', cost: 0.15 },
-        'cherry_tomatoes': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.10 },
-        'caramelized_onions': { unit: 'g', amount: 35, category: 'vegetable', cost: 0.08 },
-        'mozzarella': { unit: 'g', amount: 120, category: 'cheese', cost: 0.25 }
+        'anchovies': { unit: 'g', amount: 34, category: 'fish', cost: 0.25 },
+        'kalamata_olives': { unit: 'g', amount: 50, category: 'vegetable', cost: 0.10 },
+        'fresh_mozzarella': { unit: 'g', amount: 80, category: 'cheese', cost: 0.15 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'basil': { unit: 'g', amount: 3.5, category: 'herb', cost: 0.20 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
+      }
+    },
+    'CHICK TICK BOOM': {
+      ingredients: {
+        'spicy_chicken_tikka': { unit: 'g', amount: 100, category: 'meat', cost: 0.25 },
+        'peppadews': { unit: 'g', amount: 30, category: 'vegetable', cost: 0.15 },
+        'fresh_coriander': { unit: 'g', amount: 3.5, category: 'herb', cost: 0.12 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
+      }
+    },
+    'ARTICHOKE & HAM': {
+      ingredients: {
+        'ham': { unit: 'g', amount: 40, category: 'meat', cost: 0.15 },
+        'mushrooms': { unit: 'g', amount: 55, category: 'vegetable', cost: 0.08 },
+        'artichoke_leaves': { unit: 'g', amount: 100, category: 'vegetable', cost: 0.22 },
+        'olives': { unit: 'g', amount: 50, category: 'vegetable', cost: 0.10 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 }
+      }
+    },
+    'GLAZE OF GLORY': {
+      ingredients: {
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'bacon': { unit: 'g', amount: 64, category: 'meat', cost: 0.14 },
+        'red_onion': { unit: 'g', amount: 8, category: 'vegetable', cost: 0.04 },
+        'feta': { unit: 'g', amount: 32, category: 'cheese', cost: 0.18 },
+        'balsamic_glaze': { unit: 'ml', amount: 10, category: 'sauce', cost: 0.15 }
+      }
+    },
+    'MEDITERRANEAN': {
+      ingredients: {
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'baby_marrow': { unit: 'g', amount: 40, category: 'vegetable', cost: 0.08 },
+        'olives': { unit: 'g', amount: 50, category: 'vegetable', cost: 0.10 },
+        'sundried_tomatoes': { unit: 'g', amount: 60, category: 'vegetable', cost: 0.20 },
+        'feta': { unit: 'g', amount: 32, category: 'cheese', cost: 0.18 },
+        'garlic': { unit: 'g', amount: 2, category: 'vegetable', cost: 0.05 }
+      }
+    },
+    'QUATTRO FORMAGGI': {
+      ingredients: {
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'provolone': { unit: 'g', amount: 64, category: 'cheese', cost: 0.20 },
+        'fig_preserve': { unit: 'g', amount: 45, category: 'spread', cost: 0.20 },
+        'red_onion': { unit: 'g', amount: 8, category: 'vegetable', cost: 0.04 },
+        'parmesan': { unit: 'g', amount: 10, category: 'cheese', cost: 0.18 },
+        'blue_cheese': { unit: 'g', amount: 25, category: 'cheese', cost: 0.25 }
+      }
+    },
+    'CAPRESE': {
+      ingredients: {
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'baby_tomatoes': { unit: 'g', amount: 100, category: 'vegetable', cost: 0.10 },
+        'fresh_mozzarella': { unit: 'g', amount: 80, category: 'cheese', cost: 0.15 },
+        'basil_pesto': { unit: 'g', amount: 6, category: 'sauce', cost: 0.22 },
+        'balsamic_glaze': { unit: 'ml', amount: 10, category: 'sauce', cost: 0.15 },
+        'basil': { unit: 'g', amount: 3.5, category: 'herb', cost: 0.20 }
+      }
+    },
+    'OWEN': {
+      ingredients: {
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 }
       }
     },
     'BUILD YOUR OWN': {
       ingredients: {
-        'sourdough_dough': { unit: 'ball', amount: 1, category: 'dough', cost: 12.50 },
-        'tomato_sauce': { unit: 'ml', amount: 80, category: 'sauce', cost: 0.05 },
-        'mozzarella_cheese': { unit: 'g', amount: 100, category: 'cheese', cost: 0.12 }
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 }
+      }
+    }
+  },
+  
+  // Prep recipes - these create ingredients used in pizzas
+  prepRecipes: {
+    'caramelised_onions': {
+      // Makes enough caramelised onions for multiple pizzas
+      yield: 1000, // grams of finished product
+      ingredients: {
+        'white_onions': { unit: 'g', amount: 1000, category: 'vegetable', cost: 0.04 },
+        'brown_sugar': { unit: 'g', amount: 80, category: 'baking', cost: 0.02 },
+        'oil': { unit: 'ml', amount: 100, category: 'oil', cost: 0.08 },
+        'balsamic_vinegar': { unit: 'ml', amount: 50, category: 'condiment', cost: 0.15 },
+        'rosemary': { unit: 'g', amount: 10, category: 'herb', cost: 0.10 }
+      }
+    },
+    'caramelised_pineapple': {
+      yield: 800, // grams of finished product (after cooking/draining)
+      ingredients: {
+        'pineapple_tin': { unit: 'tin', amount: 1, category: 'fruit', cost: 25.00 },
+        'brown_sugar': { unit: 'g', amount: 100, category: 'baking', cost: 0.02 },
+        'oil': { unit: 'ml', amount: 100, category: 'oil', cost: 0.08 }
+      }
+    },
+    'potato_slices': {
+      yield: 1200, // grams of finished crispy potatoes
+      ingredients: {
+        'potatoes': { unit: 'g', amount: 1400, category: 'vegetable', cost: 0.06 },
+        'oil': { unit: 'ml', amount: 100, category: 'oil', cost: 0.08 },
+        'rosemary': { unit: 'g', amount: 30, category: 'herb', cost: 0.10 },
+        'salt': { unit: 'g', amount: 10, category: 'seasoning', cost: 0.01 }
+      }
+    },
+    'hummus': {
+      yield: 500, // grams of finished hummus
+      ingredients: {
+        'chickpeas_tin': { unit: 'tin', amount: 2, category: 'legume', cost: 18.00 },
+        'chickpea_liquid': { unit: 'ml', amount: 70, category: 'liquid', cost: 0.01 },
+        'garlic': { unit: 'g', amount: 10, category: 'vegetable', cost: 0.05 },
+        'salt': { unit: 'g', amount: 10, category: 'seasoning', cost: 0.01 },
+        'tahini': { unit: 'g', amount: 80, category: 'paste', cost: 0.50 },
+        'black_pepper': { unit: 'g', amount: 1, category: 'spice', cost: 0.05 },
+        'lemon_juice': { unit: 'ml', amount: 3, category: 'citrus', cost: 0.02 }
       }
     }
   },
@@ -295,5 +292,33 @@ export const PIZZA_INGREDIENTS = {
         'red_bull_can': { unit: 'piece', amount: 1, category: 'beverage_finished', cost: 25.00 }
       }
     }
+  },
+  
+  // Pizza name mapping for order processing
+  pizzaNameMap: {
+    // Map various order names to our standardized pizza names
+    'The Champ': 'THE CHAMP',
+    'Pig in Paradise': 'PIG IN PARADISE', 
+    'Margie Pizza': 'MARGIE',
+    'Margie': 'MARGIE',
+    'Mushroom Cloud Pizza': 'MUSHROOM CLOUD',
+    'Mushroom Cloud': 'MUSHROOM CLOUD',
+    'Spud Pizza': 'SPUD',
+    'Spud': 'SPUD',
+    'Mish-Mash Pizza': 'MISH-MASH',
+    'Mish-Mash': 'MISH-MASH',
+    'Lekker\'izza Pizza': 'LEKKER\'IZZA',
+    'Lekkerizza': 'LEKKER\'IZZA',
+    'Vegan Harvest Pizza': 'VEGAN HARVEST',
+    'Vegan Harvest': 'VEGAN HARVEST',
+    'Poppa\'s Pizza': 'POPPA\'S',
+    'Poppa': 'POPPA\'S',
+    'Chick Tick Boom': 'CHICK TICK BOOM',
+    'Artichoke & Ham': 'ARTICHOKE & HAM',
+    'Glaze of Glory': 'GLAZE OF GLORY',
+    'Mediterranean': 'MEDITERRANEAN',
+    'Quattro Formaggi': 'QUATTRO FORMAGGI',
+    'Caprese': 'CAPRESE',
+    'Owen': 'OWEN'
   }
 };

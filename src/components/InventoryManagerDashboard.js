@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import InventoryUsageSummary from './InventoryUsageSummary';
 import emailNotificationService from '../services/EmailNotificationService';
 import useFirebaseOrders from '../hooks/useFirebaseOrders';
+import BulkStockUpdateModal from './BulkStockUpdateModal';
+import EndOfDayModal from './EndOfDayModal';
+import NotificationSettings from './NotificationSettings';
+import DailyNotificationService from '../services/DailyNotificationService';
 
 const InventoryManagerDashboard = () => {
   const [managerEmail, setManagerEmail] = useState('');
@@ -12,6 +16,9 @@ const InventoryManagerDashboard = () => {
   const [dailyReportsEnabled, setDailyReportsEnabled] = useState(false);
   const [lastDailyReport, setLastDailyReport] = useState(null);
   const [currentInventory, setCurrentInventory] = useState({});
+  const [showBulkUpdateModal, setShowBulkUpdateModal] = useState(false);
+  const [showEndOfDayModal, setShowEndOfDayModal] = useState(false);
+  const [activeTab, setActiveTab] = useState('summary'); // summary, notifications, settings
   
   const { data: orders = [], loading } = useFirebaseOrders();
   
@@ -71,7 +78,7 @@ const InventoryManagerDashboard = () => {
     if (dailyReportEnabled && managerEmail) {
       checkAndSendDailyReport();
     }
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Save manager email when it changes
   useEffect(() => {
@@ -306,6 +313,76 @@ const InventoryManagerDashboard = () => {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+  
+  // Handle bulk stock update
+  const handleBulkStockUpdate = async (changes) => {
+    try {
+      // Import Firebase service
+      const { db } = await import('../firebase');
+      const batch = db.batch();
+      
+      Object.entries(changes).forEach(([ingredient, data]) => {
+        const docRef = db.collection('inventory').doc(ingredient);
+        batch.set(docRef, data, { merge: true });
+      });
+      
+      await batch.commit();
+      
+      // Reload inventory
+      const inventoryRef = db.collection('inventory');
+      const inventorySnapshot = await inventoryRef.get();
+      const inventoryData = {};
+      inventorySnapshot.forEach((doc) => {
+        inventoryData[doc.id] = doc.data();
+      });
+      setCurrentInventory(inventoryData);
+      
+      setEmailStatus({ 
+        message: `Updated ${Object.keys(changes).length} ingredients successfully!`, 
+        type: 'success' 
+      });
+      setTimeout(() => setEmailStatus({ message: '', type: '' }), 3000);
+      
+    } catch (error) {
+      console.error('Error updating bulk stock:', error);
+      setEmailStatus({ 
+        message: 'Failed to update inventory: ' + error.message, 
+        type: 'error' 
+      });
+      setTimeout(() => setEmailStatus({ message: '', type: '' }), 5000);
+    }
+  };
+  
+  // Handle end of day completion
+  const handleEndOfDayComplete = (result) => {
+    console.log('End of day processing completed:', result);
+    
+    // Reload inventory after processing
+    const loadCurrentInventory = async () => {
+      try {
+        const { db } = await import('../firebase');
+        const inventoryRef = db.collection('inventory');
+        const inventorySnapshot = await inventoryRef.get();
+        
+        const inventoryData = {};
+        inventorySnapshot.forEach((doc) => {
+          inventoryData[doc.id] = doc.data();
+        });
+        
+        setCurrentInventory(inventoryData);
+      } catch (error) {
+        console.error('Error reloading inventory:', error);
+      }
+    };
+    
+    loadCurrentInventory();
+    
+    setEmailStatus({ 
+      message: `End of day processing completed! ${result.ordersProcessed} orders processed, ${result.ingredientsUpdated} ingredients updated.`, 
+      type: 'success' 
+    });
+    setTimeout(() => setEmailStatus({ message: '', type: '' }), 5000);
+  };
 
   if (loading) {
     return (
@@ -532,13 +609,25 @@ const InventoryManagerDashboard = () => {
           </div>
         </div>
         
-        {/* Quick Actions for Stock Management */}
+        {/* Enhanced Quick Actions */}
         <div className="border-t pt-4">
-          <h4 className="font-medium mb-3 text-gray-700">Quick Actions</h4>
+          <h4 className="font-medium mb-3 text-gray-700">Inventory Management Actions</h4>
           <div className="flex flex-wrap gap-2">
             <button
+              onClick={() => setShowBulkUpdateModal(true)}
+              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+            >
+              📦 Bulk Stock Update
+            </button>
+            <button
+              onClick={() => setShowEndOfDayModal(true)}
+              className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+            >
+              🌙 End of Day Processing
+            </button>
+            <button
               onClick={() => window.location.hash = '#/inventory'}
-              className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200"
+              className="bg-purple-100 text-purple-700 px-3 py-2 rounded hover:bg-purple-200 transition-colors"
             >
               📊 View Full Inventory
             </button>
@@ -551,25 +640,71 @@ const InventoryManagerDashboard = () => {
                 if (lowStock.length > 0) {
                   alert(`Low Stock Items:\n\n${lowStock.join('\n')}`);
                 } else {
-                  alert('No low stock items! 🎉');
+                  alert('All inventory levels are good! 🎉');
                 }
               }}
-              className="bg-red-100 text-red-700 px-3 py-1 rounded text-sm hover:bg-red-200"
+              className="bg-yellow-100 text-yellow-700 px-3 py-2 rounded hover:bg-yellow-200 transition-colors"
             >
               ⚠️ Check Low Stock
             </button>
             <button
-              onClick={() => handleSendDailyReport()}
-              className="bg-green-100 text-green-700 px-3 py-1 rounded text-sm hover:bg-green-200"
+              onClick={() => DailyNotificationService.testNotification()}
+              className="bg-orange-100 text-orange-700 px-3 py-2 rounded hover:bg-orange-200 transition-colors"
             >
-              📧 Send Report Now
+              📧 Test Notification
             </button>
           </div>
         </div>
       </div>
       
-      {/* Usage Summary Component */}
-      <InventoryUsageSummary orders={orders} />
+      {/* Tabbed Interface */}
+      <div className="bg-white rounded-lg shadow">
+        {/* Tab Headers */}
+        <div className="border-b">
+          <nav className="-mb-px flex">
+            <button
+              onClick={() => setActiveTab('summary')}
+              className={`py-2 px-4 border-b-2 font-medium text-sm ${
+                activeTab === 'summary'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Usage Summary
+            </button>
+            <button
+              onClick={() => setActiveTab('notifications')}
+              className={`py-2 px-4 border-b-2 font-medium text-sm ${
+                activeTab === 'notifications'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Notification Settings
+            </button>
+          </nav>
+        </div>
+        
+        {/* Tab Content */}
+        <div className="p-6">
+          {activeTab === 'summary' && <InventoryUsageSummary orders={orders} />}
+          {activeTab === 'notifications' && <NotificationSettings />}
+        </div>
+      </div>
+      
+      {/* Modals */}
+      <BulkStockUpdateModal
+        isOpen={showBulkUpdateModal}
+        onClose={() => setShowBulkUpdateModal(false)}
+        currentInventory={currentInventory}
+        onSave={handleBulkStockUpdate}
+      />
+      
+      <EndOfDayModal
+        isOpen={showEndOfDayModal}
+        onClose={() => setShowEndOfDayModal(false)}
+        onComplete={handleEndOfDayComplete}
+      />
     </div>
   );
 };

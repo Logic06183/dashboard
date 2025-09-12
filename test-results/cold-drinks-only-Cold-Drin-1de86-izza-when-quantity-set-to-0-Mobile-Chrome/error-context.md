@@ -1,0 +1,135 @@
+# Page snapshot
+
+```yaml
+- heading "John Dough's" [level=1]
+- button:
+  - img
+- navigation:
+  - link "Dashboard":
+    - /url: /
+    - img
+    - text: Dashboard
+  - link "Customers":
+    - /url: /customers
+    - img
+    - text: Customers
+  - link "Orders":
+    - /url: /orders
+    - img
+    - text: Orders
+  - link "Inventory":
+    - /url: /inventory
+    - img
+    - text: Inventory
+  - link "Analytics":
+    - /url: /analytics
+    - img
+    - text: Analytics
+  - link "Settings":
+    - /url: /settings
+    - img
+    - text: Settings
+- banner:
+  - heading "Pizza Orders Dashboard" [level=1]
+  - button "Clear Orders"
+  - button "New Order"
+  - button:
+    - img
+- heading "Simple Direct Order" [level=2]
+- button "×"
+- text: Customer Name
+- button "Switch to Customer Search"
+- textbox "Enter customer name..."
+- text: Delivery Method
+- combobox:
+  - option "Window" [selected]
+  - option "Uber Eats"
+  - option "Mr D Food"
+  - option "Bolt Food"
+  - option "Customer Pickup"
+  - option "Staff"
+  - option "Other"
+- text: Prep Time (minutes)
+- spinbutton: "15"
+- paragraph: How many minutes needed to prepare this order
+- text: "Window Customer Estimate Current queue: 1 pizzas * Includes predicted incoming orders • Updates automatically"
+- heading "Pizza Items" [level=3]
+- paragraph: No pizzas added yet
+- button "Add First Pizza"
+- heading "Cold Drinks" [level=3]
+- button "+ Add Cold Drink"
+- heading "Order Summary" [level=3]
+- text: "No items added yet Total: R0.00"
+- button "Place Order"
+- paragraph: This form uses a stable Firebase connection that prevents termination errors.
+- paragraph: ✓ Firebase connected and ready to process orders
+- paragraph: Multiple pizzas support enabled - create complex orders with different pizza types.
+- banner:
+  - heading "John Dough's Dashboard" [level=1]
+  - paragraph: Sourdough Pizza Excellence
+  - link "Firebase Test Tool":
+    - /url: /firebase-test
+  - checkbox "Show Completed Orders"
+  - text: Show Completed Orders
+  - button "Clear All Orders"
+- main:
+  - img
+  - text: "-5%"
+  - heading "John's Daily Sales" [level=3]
+  - paragraph: R2528.00
+  - img
+  - text: 19.0%
+  - heading "Pizza Orders" [level=3]
+  - paragraph: "19"
+  - img
+  - text: +12%
+  - heading "Most Popular Pizza" [level=3]
+  - paragraph: The Champ
+  - img
+  - text: On Track
+  - heading "Kitchen Status" [level=3]
+  - paragraph: 13 min
+  - img
+  - text: 100%
+  - heading "Pizza Completion" [level=3]
+  - paragraph: 10526/10527
+  - heading "Orders by Hour" [level=3]
+  - img: 0 350 700 1050 1400
+  - heading "Most Popular Pizzas" [level=3]
+  - img:
+    - img
+    - img
+    - img
+    - img
+    - img
+    - text: 1214 1152 1003 590 483
+  - list:
+    - listitem:
+      - img
+      - text: PIG IN PARADISE
+    - listitem:
+      - img
+      - text: MARGIE
+    - listitem:
+      - img
+      - text: THE CHAMP
+    - listitem:
+      - img
+      - text: Margie Pizza
+    - listitem:
+      - img
+      - text: The Champ Pizza
+  - heading "Orders by Platform" [level=3]
+  - img: 0 750 1500 2250 3000
+  - heading "Average Preparation Times" [level=3]
+  - img: 0 4 8 12 16
+  - heading "Business Insights" [level=3]
+  - heading "Peak Hours" [level=4]
+  - paragraph: "Busiest time: 18:00 Orders: 1393"
+  - heading "Best Platform" [level=4]
+  - paragraph: "Platform: Uber Eats Revenue: R852463.00"
+  - heading "Customer Base" [level=4]
+  - paragraph: "Total Customers: 2382 Avg Order Value: R133.05"
+  - paragraph: "Top Customer:"
+  - paragraph: Sir 358 orders · R93290.00 spent
+```

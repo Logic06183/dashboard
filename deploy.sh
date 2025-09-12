@@ -9,10 +9,21 @@ echo "Adding cache-busting to the build..."
 TIMESTAMP=$(date +%s)
 cd build
 
-# Replace main.*.js references in index.html with cache-busting parameters
-sed -i.bak "s|/static/js/main\.[a-z0-9]\+\.js|/static/js/main.51cd9304.js?v=${TIMESTAMP}|g" index.html
-sed -i.bak "s|/static/css/main\.[a-z0-9]\+\.css|/static/css/main.b99d89c3.css?v=${TIMESTAMP}|g" index.html
-rm index.html.bak
+# Find the actual main JS and CSS files
+MAIN_JS=$(ls static/js/main.*.js 2>/dev/null | head -1 | xargs basename)
+MAIN_CSS=$(ls static/css/main.*.css 2>/dev/null | head -1 | xargs basename)
+
+if [ -n "$MAIN_JS" ] && [ -n "$MAIN_CSS" ]; then
+  echo "Found JS file: $MAIN_JS"
+  echo "Found CSS file: $MAIN_CSS"
+  
+  # Replace main.*.js and main.*.css references in index.html with cache-busting parameters
+  sed -i.bak "s|/static/js/main\.[a-z0-9]\+\.js|/static/js/${MAIN_JS}?v=${TIMESTAMP}|g" index.html
+  sed -i.bak "s|/static/css/main\.[a-z0-9]\+\.css|/static/css/${MAIN_CSS}?v=${TIMESTAMP}|g" index.html
+  rm index.html.bak
+else
+  echo "Warning: Could not find main JS or CSS files. Skipping cache-busting."
+fi
 
 echo "Creating app.yaml with aggressive cache control..."
 # Create a temporary app.yaml in the build directory with strong cache-control headers
@@ -68,6 +79,6 @@ echo "App.yaml created with aggressive cache-busting settings"
 rm app.yaml
 cd ..
 
-echo "Deployment completed! New version with original OrderForm is now live."
+echo "Deployment completed! New version is now live."
 echo "Visit: https://pizza-inventory-system.nw.r.appspot.com?nocache=$(date +%s)"
 echo "(The ?nocache parameter helps bypass browser cache)"
