@@ -13,8 +13,31 @@ const EmailTestComponent = () => {
   // Craig's EmailJS credentials from the screenshot
   const emailConfig = {
     publicKey: process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'IzxQHabdq_CzfAHbn',
-    serviceId: process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_default_service', // You'll need to update this
-    templateId: process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_daily_stock_report' // You'll need to create this
+    serviceId: process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_default_service', // Need actual Service ID from EmailJS dashboard
+    templateId: process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_daily_stock_report' // ✅ Created in EmailJS
+  };
+
+  // Try common Service ID patterns if the default doesn't work
+  const tryCommonServiceIds = async (templateParams) => {
+    const commonServiceIds = [
+      'service_default_service',
+      'gmail', 
+      'service_gmail',
+      'default_service',
+      emailConfig.serviceId // Current configured one
+    ];
+
+    for (const serviceId of commonServiceIds) {
+      try {
+        console.log(`Trying Service ID: ${serviceId}`);
+        const response = await emailjs.send(serviceId, emailConfig.templateId, templateParams);
+        return { success: true, response, serviceId };
+      } catch (error) {
+        console.log(`Failed with ${serviceId}:`, error.message);
+        continue;
+      }
+    }
+    throw new Error('All common Service IDs failed. Please check your EmailJS dashboard for the correct Service ID.');
   };
 
   const sendTestEmail = async () => {
@@ -71,16 +94,25 @@ The Dashboard Team 🤖`
       console.log('Sending email with config:', emailConfig);
       console.log('Template params:', templateParams);
       
-      const response = await emailjs.send(
-        emailConfig.serviceId,
-        emailConfig.templateId,
-        templateParams
-      );
+      // Try to send with current config first, then try common Service IDs
+      let result;
+      try {
+        const response = await emailjs.send(
+          emailConfig.serviceId,
+          emailConfig.templateId,
+          templateParams
+        );
+        result = { success: true, response, serviceId: emailConfig.serviceId };
+      } catch (error) {
+        console.log('Primary Service ID failed, trying alternatives...');
+        result = await tryCommonServiceIds(templateParams);
+      }
 
-      console.log('Email sent successfully:', response);
+      console.log('Email sent successfully:', result.response);
       setTestStatus(`✅ Test email sent successfully! 
       
-Response: ${response.status} - ${response.text}
+Service ID that worked: ${result.serviceId}
+Response: ${result.response.status} - ${result.response.text}
       
 Check craigparker6@gmail.com for the email.
 

@@ -51,7 +51,7 @@ class EmailNotificationService {
 
       const response = await emailjs.send(
         this.serviceId,
-        'daily_stock_template', // Use specific template for daily reports
+        this.templateId, // Use the configured template ID
         templateParams
       );
 
