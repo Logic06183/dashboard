@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import DashboardPage from './components/pages/DashboardPage';
 import KitchenDisplayPage from './components/pages/KitchenDisplayPage';
 import InventoryPage from './components/pages/InventoryPage';
+import SimpleInventoryPage from './components/pages/SimpleInventoryPage';
 import OrdersPage from './components/pages/OrdersPage';
 import AnalyticsPage from './components/pages/AnalyticsPage';
 import SettingsPage from './components/pages/SettingsPage';
@@ -100,6 +101,7 @@ function App() {
                 onArchiveOrder={handleArchiveOrder}
               />} />
               <Route path="/inventory" element={<InventoryPage />} />
+              <Route path="/stock" element={<SimpleInventoryPage />} />
               <Route path="/orders" element={<OrdersPage 
                 onStatusChange={handleStatusChange}
                 onArchiveOrder={handleArchiveOrder}
