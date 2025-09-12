@@ -4,6 +4,7 @@
  */
 
 import { PIZZA_INGREDIENTS } from '../data/ingredients';
+import { mapIngredientToInventory } from '../data/ingredient-mapping-fix';
 import FirebaseService from './FirebaseService';
 
 /**
@@ -59,18 +60,20 @@ export const calculateOrderIngredientUsage = (order) => {
       
       // Add base ingredients (sourdough dough - always needed)
       Object.entries(PIZZA_INGREDIENTS.base).forEach(([ingredient, data]) => {
-        if (!usage[ingredient]) {
-          usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+        const inventoryIngredient = mapIngredientToInventory(ingredient);
+        if (!usage[inventoryIngredient]) {
+          usage[inventoryIngredient] = { used: 0, unit: data.unit, category: data.category };
         }
-        usage[ingredient].used += data.amount * quantity;
+        usage[inventoryIngredient].used += data.amount * quantity;
       });
       
       // Add pizza-specific ingredients
       Object.entries(recipe.ingredients).forEach(([ingredient, data]) => {
-        if (!usage[ingredient]) {
-          usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+        const inventoryIngredient = mapIngredientToInventory(ingredient);
+        if (!usage[inventoryIngredient]) {
+          usage[inventoryIngredient] = { used: 0, unit: data.unit, category: data.category };
         }
-        usage[ingredient].used += data.amount * quantity;
+        usage[inventoryIngredient].used += data.amount * quantity;
       });
     });
   }
@@ -85,10 +88,11 @@ export const calculateOrderIngredientUsage = (order) => {
       
       const drinkRecipe = PIZZA_INGREDIENTS.coldDrinks[drinkType];
       Object.entries(drinkRecipe.ingredients).forEach(([ingredient, data]) => {
-        if (!usage[ingredient]) {
-          usage[ingredient] = { used: 0, unit: data.unit, category: data.category };
+        const inventoryIngredient = mapIngredientToInventory(ingredient);
+        if (!usage[inventoryIngredient]) {
+          usage[inventoryIngredient] = { used: 0, unit: data.unit, category: data.category };
         }
-        usage[ingredient].used += data.amount * quantity;
+        usage[inventoryIngredient].used += data.amount * quantity;
       });
     });
   }
