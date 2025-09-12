@@ -12,6 +12,7 @@ import Sidebar from './components/Sidebar';
 import HookOrderTest from './components/HookOrderTest';
 import FirebaseDirectForm from './components/FirebaseDirectForm';
 import OrderCleanupUtility from './components/OrderCleanupUtility';
+import EmailTestComponent from './components/EmailTestComponent';
 import TestCustomerData from './components/TestCustomerData';
 import FirebaseService from './services/FirebaseService';
 import './App.css';
@@ -110,6 +111,7 @@ function App() {
               <Route path="/waste" element={<WasteManagementPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/cleanup" element={<OrderCleanupUtility />} />
+              <Route path="/email-test" element={<EmailTestComponent />} />
             </Routes>
           </main>
         </div>
