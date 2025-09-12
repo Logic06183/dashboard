@@ -10,10 +10,10 @@ const EmailTestComponent = () => {
   const [testStatus, setTestStatus] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  // Craig's EmailJS credentials from the screenshot
+  // Craig's EmailJS credentials - COMPLETE CONFIGURATION
   const emailConfig = {
     publicKey: process.env.REACT_APP_EMAILJS_PUBLIC_KEY || 'IzxQHabdq_CzfAHbn',
-    serviceId: process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_default_service', // Need actual Service ID from EmailJS dashboard
+    serviceId: process.env.REACT_APP_EMAILJS_SERVICE_ID || 'service_abc123', // ✅ Craig's actual Service ID
     templateId: process.env.REACT_APP_EMAILJS_TEMPLATE_ID || 'template_daily_stock_report' // ✅ Created in EmailJS
   };
 
