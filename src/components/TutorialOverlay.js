@@ -11,14 +11,19 @@ const TutorialOverlay = ({ steps, onComplete, tutorialKey, autoStart = false }) 
   const [isActive, setIsActive] = useState(false);
   const [hasCompleted, setHasCompleted] = useState(false);
 
-  // Check if user has completed this tutorial before
+  // Check if user has seen this tutorial today
   useEffect(() => {
-    const completed = localStorage.getItem(`tutorial_completed_${tutorialKey}`);
-    setHasCompleted(completed === 'true');
+    const lastShown = localStorage.getItem(`tutorial_last_shown_${tutorialKey}`);
+    const today = new Date().toDateString();
 
-    // Auto-start if enabled and not completed
-    if (autoStart && completed !== 'true') {
+    // Check if tutorial was already shown today
+    const shownToday = lastShown === today;
+    setHasCompleted(shownToday);
+
+    // Auto-start if enabled and not shown today
+    if (autoStart && !shownToday) {
       setIsActive(true);
+      localStorage.setItem(`tutorial_last_shown_${tutorialKey}`, today);
     }
   }, [tutorialKey, autoStart]);
 
@@ -42,7 +47,8 @@ const TutorialOverlay = ({ steps, onComplete, tutorialKey, autoStart = false }) 
   };
 
   const handleComplete = () => {
-    localStorage.setItem(`tutorial_completed_${tutorialKey}`, 'true');
+    const today = new Date().toDateString();
+    localStorage.setItem(`tutorial_last_shown_${tutorialKey}`, today);
     setHasCompleted(true);
     setIsActive(false);
     setCurrentStep(0);
