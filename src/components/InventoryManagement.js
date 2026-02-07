@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import useFirebaseOrders from '../hooks/useFirebaseOrders';
 import { PIZZA_INGREDIENTS } from '../data/ingredients';
 import { db, firebase } from '../firebase';
+import FirebaseService from '../services/FirebaseService';
 import InventoryManagerDashboard from './InventoryManagerDashboard';
 
 // UsageAnalysis component to calculate ingredient usage based on orders
@@ -372,79 +373,15 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
         setInventoryLoading(true);
         setInventoryError(null);
         console.log('Starting inventory load from Firebase...');
-        
-        // Get inventory collection from Firebase
-        const inventoryRef = db.collection('inventory');
-        const inventorySnapshot = await inventoryRef.get();
-        
-        const inventoryData = {};
-        inventorySnapshot.forEach((doc) => {
-          inventoryData[doc.id] = doc.data();
-        });
-        
+
+        // Get inventory data using FirebaseService
+        const inventoryData = await FirebaseService.getInventory();
+
         console.log('Loaded inventory data from Firebase:', inventoryData);
         console.log('Number of ingredients loaded:', Object.keys(inventoryData).length);
-        
-        // If no inventory data exists, initialize with default values
-        if (Object.keys(inventoryData).length === 0) {
-          console.log('No inventory found. Initializing with default values.');
-          
-          // Initialize with base ingredients
-          Object.entries(PIZZA_INGREDIENTS.base).forEach(([ingredient, data]) => {
-            const { unit, category } = data;
-            inventoryData[ingredient] = {
-              amount: 100, // Default amount
-              threshold: 20, // Default threshold
-              unit: unit,
-              category: category
-            };
-          });
-          
-          // Add pizza-specific ingredients
-          Object.values(PIZZA_INGREDIENTS.pizzas).forEach(pizza => {
-            Object.entries(pizza.ingredients).forEach(([ingredient, data]) => {
-              if (!inventoryData[ingredient]) {
-                const { unit, category } = data;
-                inventoryData[ingredient] = {
-                  amount: 100, // Default amount
-                  threshold: 20, // Default threshold
-                  unit: unit,
-                  category: category
-                };
-              }
-            });
-          });
-          
-          // Add cold drink ingredients
-          Object.values(PIZZA_INGREDIENTS.coldDrinks || {}).forEach(drink => {
-            Object.entries(drink.ingredients).forEach(([ingredient, data]) => {
-              if (!inventoryData[ingredient]) {
-                const { unit, category } = data;
-                inventoryData[ingredient] = {
-                  amount: 100, // Default amount
-                  threshold: 20, // Default threshold
-                  unit: unit,
-                  category: category
-                };
-              }
-            });
-          });
-          
-          console.log('Created default inventory data with', Object.keys(inventoryData).length, 'ingredients');
-          
-          // Save default inventory to Firebase
-          console.log('Saving default inventory to Firebase...');
-          try {
-            for (const [ingredient, data] of Object.entries(inventoryData)) {
-              console.log(`Saving ${ingredient} to Firebase:`, data);
-              await db.collection('inventory').doc(ingredient).set(data);
-            }
-            console.log('Successfully saved all default inventory data to Firebase');
-          } catch (saveError) {
-            console.error('Error saving default inventory to Firebase:', saveError);
-            setInventoryError(`Error initializing inventory: ${saveError.message}`);
-          }
-        }
+
+        // Note: If inventory is empty, that's fine - the analytics will show no data
+        // Staff should use the Daily Stock Entry page (/stock) to add initial inventory
         
         // Debug - ensure amount is a number for all items
         Object.entries(inventoryData).forEach(([ingredient, data]) => {
@@ -474,12 +411,10 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
   const saveInventoryToFirebase = async () => {
     try {
       setSaveStatus('Saving inventory...');
-      
-      // Update each inventory item in Firebase
-      for (const [ingredient, data] of Object.entries(inventory)) {
-        await db.collection('inventory').doc(ingredient).set(data);
-      }
-      
+
+      // Update inventory using FirebaseService
+      await FirebaseService.updateInventory(inventory);
+
       setSaveStatus('Inventory saved successfully!');
       setTimeout(() => setSaveStatus(''), 3000);
     } catch (error) {
@@ -1210,7 +1145,7 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
                   <p className="text-gray-600">Total value of current inventory</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-bold text-blue-600">${calculateInventoryCost()}</p>
+                  <p className="text-3xl font-bold text-blue-600">R{calculateInventoryCost()}</p>
                   <p className="text-sm text-gray-500">{Object.keys(inventory).length} ingredients in stock</p>
                 </div>
               </div>
@@ -1715,7 +1650,7 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
               <div className="bg-green-50 p-4 rounded-lg">
                 <h4 className="font-semibold">Estimated Weekly Cost</h4>
                 <p className="text-3xl font-bold text-green-600">
-                  ${forecastData
+                  R{forecastData
                     .reduce((total, item) => total + (parseFloat(item.dailyUsage) * 7 * item.costPerUnit), 0)
                     .toFixed(2)}
                 </p>
@@ -1767,7 +1702,7 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
                       <td className="p-3 border-b">
                         {item.daysRemaining === 999 ? 'N/A' : item.reorderDate.toLocaleDateString()}
                       </td>
-                      <td className="p-3 border-b">${item.costPerUnit.toFixed(2)}/{item.unit}</td>
+                      <td className="p-3 border-b">R{item.costPerUnit.toFixed(2)}/{item.unit}</td>
                       <td className="p-3 border-b">
                         <span 
                           className={`px-2 py-1 rounded text-xs ${item.daysRemaining <= 7 ? 'bg-red-100 text-red-700' : item.daysRemaining <= 14 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'}`}
