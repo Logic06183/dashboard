@@ -134,41 +134,33 @@ const UsageAnalysis = ({ orders }) => {
     
     // Calculate usage from orders
     filteredOrders.forEach(order => {
-      if (!order.pizzas || !Array.isArray(order.pizzas)) return;
-      
+      if (!order.pizzas || !Array.isArray(order.pizzas)) {
+        console.log('Order has no pizzas array:', order.id);
+        return;
+      }
+
       order.pizzas.forEach(pizza => {
         const quantity = pizza.quantity || 1;
         let pizzaType = pizza.pizzaType || pizza.type;
-        
-        if (!pizzaType) return;
-        
-        // Convert to title case
-        pizzaType = pizzaType.split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-          
-        // Handle variations
-        if (pizzaType.includes('Margherita') || pizzaType.includes('Margarita')) {
-          pizzaType = 'Margherita';
-        } else if (pizzaType.includes('Pepperoni')) {
-          pizzaType = 'Pepperoni';
-        } else if (pizzaType.includes('Vegetarian') || pizzaType.includes('Veggie')) {
-          pizzaType = 'Vegetarian';
-        } else if (pizzaType.includes('Hawaiian')) {
-          pizzaType = 'Hawaiian';
-        } else if (pizzaType.includes('Meat') && (pizzaType.includes('Lover') || pizzaType.includes('Feast'))) {
-          pizzaType = 'Meat Lovers';
-        } else if (pizzaType.includes('Mushroom') && pizzaType.includes('Cloud')) {
-          pizzaType = 'Mushroom Cloud Pizza';
-        } else if (pizzaType.includes('Champ')) {
-          pizzaType = 'The Champ';
-        } else if (pizzaType.includes('Sourdough') && pizzaType.includes('Special')) {
-          pizzaType = 'Sourdough Special';
-        } else if (pizzaType.includes('Vegan')) {
-          pizzaType = 'Vegan Delight';
+
+        if (!pizzaType) {
+          return;
         }
-        
-        if (!PIZZA_INGREDIENTS.pizzas[pizzaType]) return;
+
+        // Normalize the pizza type to match PIZZA_INGREDIENTS keys
+        // Pizza types in PIZZA_INGREDIENTS are stored in ALL CAPS
+        pizzaType = pizzaType.toUpperCase().trim();
+
+        // Remove trailing punctuation (like ! or .)
+        pizzaType = pizzaType.replace(/[!.?]+$/, '');
+
+        // Handle escaped apostrophes in JavaScript object keys
+        // Database might have "POPPA'S" but PIZZA_INGREDIENTS has 'POPPA\'S'
+        // This is just for matching - the actual key handles escaping automatically
+
+        if (!PIZZA_INGREDIENTS.pizzas[pizzaType]) {
+          return;
+        }
         
         // Add base ingredients
         Object.entries(PIZZA_INGREDIENTS.base).forEach(([ingredient, data]) => {
@@ -749,33 +741,14 @@ const InventoryManagement = ({ orders: propOrders = [] }) => {
         let pizzaType = pizza.pizzaType || pizza.type;
         
         if (!pizzaType) return;
-        
-        // Convert to title case
-        pizzaType = pizzaType.split(' ')
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-          .join(' ');
-          
-        // Handle variations
-        if (pizzaType.includes('Margherita') || pizzaType.includes('Margarita')) {
-          pizzaType = 'Margherita';
-        } else if (pizzaType.includes('Pepperoni')) {
-          pizzaType = 'Pepperoni';
-        } else if (pizzaType.includes('Vegetarian') || pizzaType.includes('Veggie')) {
-          pizzaType = 'Vegetarian';
-        } else if (pizzaType.includes('Hawaiian')) {
-          pizzaType = 'Hawaiian';
-        } else if (pizzaType.includes('Meat') && (pizzaType.includes('Lover') || pizzaType.includes('Feast'))) {
-          pizzaType = 'Meat Lovers';
-        } else if (pizzaType.includes('Mushroom') && pizzaType.includes('Cloud')) {
-          pizzaType = 'Mushroom Cloud Pizza';
-        } else if (pizzaType.includes('Champ')) {
-          pizzaType = 'The Champ';
-        } else if (pizzaType.includes('Sourdough') && pizzaType.includes('Special')) {
-          pizzaType = 'Sourdough Special';
-        } else if (pizzaType.includes('Vegan')) {
-          pizzaType = 'Vegan Delight';
-        }
-        
+
+        // Normalize the pizza type to match PIZZA_INGREDIENTS keys
+        // Pizza types in PIZZA_INGREDIENTS are stored in ALL CAPS
+        pizzaType = pizzaType.toUpperCase().trim();
+
+        // Remove trailing punctuation (like ! or .)
+        pizzaType = pizzaType.replace(/[!.?]+$/, '');
+
         if (!PIZZA_INGREDIENTS.pizzas[pizzaType]) return;
         
         // Add base ingredients
