@@ -1,7 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TableKitchenDisplay from '../TableKitchenDisplay';
+import ImprovedKitchenDisplay from '../ImprovedKitchenDisplay';
+import useFirebaseOrders from '../../hooks/useFirebaseOrders';
 import useQueueCalculator from '../../hooks/useQueueCalculator';
+import { updatePizzaStatus, updateOrder } from '../../services/FirebaseService';
+
+// Wrapper component to connect ImprovedKitchenDisplay with Firebase
+const ImprovedKitchenDisplayWrapper = ({ onStatusChange, onPizzaStatusChange, onArchiveOrder }) => {
+  const { data: firebaseOrders, loading, error } = useFirebaseOrders();
+
+  const handlePizzaToggle = async (orderId, pizzaIndex, isCooked) => {
+    try {
+      await updatePizzaStatus(orderId, pizzaIndex, isCooked);
+      if (onPizzaStatusChange) {
+        onPizzaStatusChange(orderId, pizzaIndex, isCooked);
+      }
+    } catch (error) {
+      console.error('Error updating pizza status:', error);
+    }
+  };
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await updateOrder(orderId, { status: newStatus });
+      if (onStatusChange) {
+        onStatusChange(orderId, newStatus);
+      }
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading orders...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">Error loading orders: {error.message}</div>
+      </div>
+    );
+  }
+
+  return (
+    <ImprovedKitchenDisplay
+      orders={firebaseOrders}
+      onStatusChange={handleStatusChange}
+      onPizzaToggle={handlePizzaToggle}
+    />
+  );
+};
 
 const KitchenDisplayPage = ({ isLoading, onStatusChange, onPizzaStatusChange, onArchiveOrder }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -149,11 +203,19 @@ const KitchenDisplayPage = ({ isLoading, onStatusChange, onPizzaStatusChange, on
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <TableKitchenDisplay 
+        {/* Toggle between old and new UI - using improved by default */}
+        <ImprovedKitchenDisplayWrapper
           onStatusChange={onStatusChange}
           onPizzaStatusChange={onPizzaStatusChange}
           onArchiveOrder={onArchiveOrder}
         />
+
+        {/* Old TableKitchenDisplay - kept for reference */}
+        {/* <TableKitchenDisplay
+          onStatusChange={onStatusChange}
+          onPizzaStatusChange={onPizzaStatusChange}
+          onArchiveOrder={onArchiveOrder}
+        /> */}
       </main>
     </div>
   );

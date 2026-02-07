@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import FirebaseService from '../../services/FirebaseService';
 import useQueueCalculator from '../../hooks/useQueueCalculator';
 import WasteReasonModal from '../WasteReasonModal';
+import ImprovedKitchenDisplay from '../ImprovedKitchenDisplay';
 
-const { updateOrder, subscribeToOrders, markOrderAsWaste, markPizzasAsWaste } = FirebaseService;
+const { updateOrder, subscribeToOrders, markOrderAsWaste, markPizzasAsWaste, updatePizzaStatus } = FirebaseService;
 
 const OrdersPage = () => {
   const { getOrderEstimate, formatTimeEstimate } = useQueueCalculator();
@@ -253,14 +254,38 @@ const OrdersPage = () => {
     return { pending, urgent, late, completed, completedByDate };
   }, [sortedOrders, currentTime]);
 
+  // Handle pizza toggle
+  const handlePizzaToggle = async (orderId, pizzaIndex, isCooked) => {
+    try {
+      await updatePizzaStatus(orderId, pizzaIndex, isCooked);
+    } catch (error) {
+      console.error('Error updating pizza status:', error);
+    }
+  };
+
+  // Handle order status change
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await updateOrder(orderId, { status: newStatus });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
+
+  // Filter orders based on showCompleted
+  const displayOrders = showCompleted ? sortedOrders : sortedOrders.filter(order => {
+    const isCompleted = isOrderCompleted(order) || order.status === 'delivered' || order.status === 'ready';
+    return !isCompleted;
+  });
+
   return (
     <div className="p-8">
       <div className="mb-4 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-gray-800">Orders</h1>
         <div className="flex items-center">
           <label className="inline-flex items-center cursor-pointer">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               className="sr-only peer"
               checked={showCompleted}
               onChange={() => setShowCompleted(!showCompleted)}
@@ -272,562 +297,14 @@ const OrdersPage = () => {
           </label>
         </div>
       </div>
-      
-      {/* Highlighted Orders Section */}
-      {Object.keys(highlightedOrders).length > 0 && (
-        <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg shadow-md">
-          <div className="flex items-center mb-3">
-            <h2 className="text-lg font-bold text-yellow-800">Highlighted Orders ({Object.keys(highlightedOrders).length})</h2>
-            <p className="ml-2 text-sm text-yellow-700">Click on an order again to remove highlighting</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {Object.keys(highlightedOrders).map(orderId => {
-              // Find the order in all groups
-              const order = [...groupedOrders.late, ...groupedOrders.urgent, ...groupedOrders.pending, ...groupedOrders.completed]
-                .find(o => (o.id === orderId || o.orderId === orderId));
-              
-              if (!order) return null;
-              
-              return (
-                <div 
-                  key={orderId} 
-                  onClick={() => toggleOrderHighlight(orderId)}
-                  className="bg-white p-3 rounded-md border-l-4 border-yellow-400 shadow-sm cursor-pointer"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center">
-                        <span className="font-bold text-yellow-800">{order.customerName || 'Anonymous Customer'}</span>
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">Due: {formatSATime(order.dueTime || order.orderTime)}</div>
-                      <div className="text-xs text-gray-500">Platform: {order.platform || 'Window'}</div>
-                      <div className="mt-2">
-                        {order.pizzas?.map((pizza, idx) => (
-                          <div key={idx} className="text-sm">
-                            <span className={order.cooked?.[idx] ? 'line-through text-gray-400' : ''}>
-                              {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
-                            </span>
-                          </div>
-                        ))}
-                        {order.coldDrinks && order.coldDrinks.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            {order.coldDrinks.map((drink, idx) => (
-                              <div key={idx} className="text-sm text-blue-600">
-                                {drink.quantity}x {drink.drinkType}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-      
-      {/* Late Orders - Highest Priority */}
-      {groupedOrders.late.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold text-red-600 flex items-center gap-2 mb-4">
-            <span className="inline-block w-3 h-3 bg-red-600 rounded-full"></span>
-            Late Orders ({groupedOrders.late.length})
-          </h3>
-          <div className="grid gap-4">
-            {groupedOrders.late.map(order => (
-              <div 
-                key={order.id || order.orderId} 
-                onClick={() => toggleOrderHighlight(order.id || order.orderId)}
-                className={`bg-white p-4 rounded-lg shadow-sm border-l-4 border-red-500 
-                  ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
-                  cursor-pointer transition-all duration-200`}
-              >
-                <p className="text-lg font-medium text-purple-600 mb-1">
-                  {order.customerName || 'Anonymous Customer'}
-                </p>
-                <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
-                {(() => {
-                  const orderEstimate = getOrderEstimate(order.id || order.orderId);
-                  return orderEstimate ? (
-                    <div className="mb-2 p-2 bg-red-50 rounded-md">
-                      <div className="text-sm font-medium text-red-600">
-                        Ready in ~{formatTimeEstimate(orderEstimate.estimatedPrepTime)}
-                      </div>
-                      <div className="text-xs text-red-500">
-                        {orderEstimate.pizzasAhead} pizzas ahead • Position #{orderEstimate.position}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-semibold">{order.customer}</h4>
-                    <p className="text-sm font-medium text-gray-800">
-                      Via: {order.platform || 'Window'}
-                    </p>
-                  </div>
-                  <span className="text-red-600 font-medium">Late</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <p>Order #{order.id || order.orderId}</p>
-                  <div className="flex items-center gap-2">
-                    {order.orderTime && (
-                      <span>Ordered: {formatSATime(order.orderTime)}</span>
-                    )}
-                    {!isOrderCompleted(order) && order.dueTime && (
-                      <span className="font-medium">Due: 
-                        <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
-                          {formatSATime(order.dueTime)}
-                        </span>
-                        {getTimeStatus(order.dueTime) && (
-                          <span className="ml-2 text-xs">
-                            {getTimeStatus(order.dueTime).status === 'late' 
-                              ? `(${getTimeStatus(order.dueTime).minutes}m late)` 
-                              : `(${getTimeStatus(order.dueTime).minutes}m left)`}
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {order.pizzas && (
-                  <div className="mt-2">
-                    {order.pizzas.map((pizza, i) => (
-                      <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={order.cooked?.[i] || false}
-                            onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
-                            onChange={async (e) => {
-                              try {
-                                const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
-                                cookedArray[i] = e.target.checked;
-                                const allCooked = cookedArray.every(status => status);
-                                
-                                await updateOrder(order.id || order.orderId, {
-                                  cooked: cookedArray,
-                                  status: allCooked ? 'done' : 'pending',
-                                  completed: allCooked
-                                });
-                                
-                                // If all pizzas are cooked, remove the order from highlighted orders
-                                if (allCooked && isOrderHighlighted(order.id || order.orderId)) {
-                                  toggleOrderHighlight(order.id || order.orderId);
-                                }
-                              } catch (error) {
-                                console.error('Error updating pizza status:', error);
-                              }
-                            }}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                          />
-                          <span className={order.cooked?.[i] ? 'line-through text-gray-400' : ''}>
-                            {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
-                          </span>
-                        </div>
-                        {pizza.specialInstructions && (
-                          <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
-                        )}
-                        {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
-                          <span className="text-green-600 font-medium text-xs">COOKED</span>
-                        )}
-                      </div>
-                    ))}
-                    {order.coldDrinks && order.coldDrinks.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
-                        {order.coldDrinks.map((drink, idx) => (
-                          <div key={idx} className="text-sm text-blue-600">
-                            {drink.quantity}x {drink.drinkType}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-                {/* Waste Actions */}
-                <div className="mt-3 pt-3 border-t border-gray-200 flex gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMarkOrderAsWaste(order);
-                    }}
-                    className="px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm font-medium"
-                    title="Mark entire order as waste"
-                  >
-                    Waste Order
-                  </button>
-                  {order.pizzas && order.pizzas.length > 1 && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarkPizzasAsWaste(order);
-                      }}
-                      className="px-3 py-1 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 text-sm font-medium"
-                      title="Mark specific pizzas as waste"
-                    >
-                      Waste Pizzas
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Urgent Orders */}
-      {groupedOrders.urgent.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold text-orange-600 flex items-center gap-2 mb-4">
-            <span className="inline-block w-3 h-3 bg-orange-600 rounded-full"></span>
-            Urgent Orders ({groupedOrders.urgent.length})
-          </h3>
-          <div className="grid gap-4">
-            {groupedOrders.urgent.map(order => (
-              <div 
-                key={order.id || order.orderId} 
-                onClick={() => toggleOrderHighlight(order.id || order.orderId)}
-                className={`bg-white shadow rounded-lg p-4 border-l-4 border-orange-500 
-                  ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
-                  cursor-pointer transition-all duration-200`}
-              >
-                <p className="text-lg font-medium text-purple-600 mb-1">
-                  {order.customerName || 'Anonymous Customer'}
-                </p>
-                <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
-                {(() => {
-                  const orderEstimate = getOrderEstimate(order.id || order.orderId);
-                  return orderEstimate ? (
-                    <div className="mb-2 p-2 bg-orange-50 rounded-md">
-                      <div className="text-sm font-medium text-orange-600">
-                        Ready in ~{formatTimeEstimate(orderEstimate.estimatedPrepTime)}
-                      </div>
-                      <div className="text-xs text-orange-500">
-                        {orderEstimate.pizzasAhead} pizzas ahead • Position #{orderEstimate.position}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-semibold">{order.customer}</h4>
-                    <p className="text-sm font-medium text-gray-800">
-                      Via: {order.platform || 'Window'}
-                    </p>
-                  </div>
-                  <span className="text-orange-600 font-medium">Urgent</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    {order.orderTime && (
-                      <span>Ordered: {formatSATime(order.orderTime)}</span>
-                    )}
-                    {!isOrderCompleted(order) && order.dueTime && (
-                      <span className="font-medium">Due: 
-                        <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
-                          {formatSATime(order.dueTime)}
-                        </span>
-                        {getTimeStatus(order.dueTime) && (
-                          <span className="ml-2 text-xs">
-                            {getTimeStatus(order.dueTime).status === 'late' 
-                              ? `(${getTimeStatus(order.dueTime).minutes}m late)` 
-                              : `(${getTimeStatus(order.dueTime).minutes}m left)`}
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {order.pizzas && (
-                  <div className="mt-2">
-                    {order.pizzas.map((pizza, i) => (
-                      <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={order.cooked?.[i] || false}
-                            onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
-                            onChange={async (e) => {
-                              try {
-                                const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
-                                cookedArray[i] = e.target.checked;
-                                const allCooked = cookedArray.every(status => status);
-                                
-                                await updateOrder(order.id || order.orderId, {
-                                  cooked: cookedArray,
-                                  status: allCooked ? 'done' : 'pending',
-                                  completed: allCooked
-                                });
-                                
-                                // If all pizzas are cooked, remove the order from highlighted orders
-                                if (allCooked && isOrderHighlighted(order.id || order.orderId)) {
-                                  toggleOrderHighlight(order.id || order.orderId);
-                                }
-                              } catch (error) {
-                                console.error('Error updating pizza status:', error);
-                              }
-                            }}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                          />
-                          <span className={order.cooked?.[i] ? 'line-through text-gray-400' : ''}>
-                            {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
-                          </span>
-                        </div>
-                        {pizza.specialInstructions && (
-                          <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
-                        )}
-                        {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
-                          <span className="text-green-600 font-medium text-xs">COOKED</span>
-                        )}
-                      </div>
-                    ))}
-                    {order.coldDrinks && order.coldDrinks.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
-                        {order.coldDrinks.map((drink, idx) => (
-                          <div key={idx} className="text-sm text-blue-600">
-                            {drink.quantity}x {drink.drinkType}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      {/* Normal Priority Orders */}
-      {groupedOrders.pending.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold text-blue-600 flex items-center gap-2 mb-4">
-            <span className="inline-block w-3 h-3 bg-blue-600 rounded-full"></span>
-            Normal Orders ({groupedOrders.pending.length})
-          </h3>
-          <div className="grid gap-4">
-            {groupedOrders.pending.map(order => (
-              <div 
-                key={order.id || order.orderId} 
-                onClick={() => toggleOrderHighlight(order.id || order.orderId)}
-                className={`bg-white shadow rounded-lg p-4 border-l-4 border-blue-600 
-                  ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
-                  cursor-pointer transition-all duration-200`}
-              >
-                <p className="text-lg font-medium text-purple-600 mb-1">
-                  {order.customerName || 'Anonymous Customer'}
-                </p>
-                <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
-                {(() => {
-                  const orderEstimate = getOrderEstimate(order.id || order.orderId);
-                  return orderEstimate ? (
-                    <div className="mb-2 p-2 bg-blue-50 rounded-md">
-                      <div className="text-sm font-medium text-blue-600">
-                        Ready in ~{formatTimeEstimate(orderEstimate.estimatedPrepTime)}
-                      </div>
-                      <div className="text-xs text-blue-500">
-                        {orderEstimate.pizzasAhead} pizzas ahead • Position #{orderEstimate.position}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="font-semibold">{order.customer}</h4>
-                    <p className="text-sm font-medium text-gray-800">
-                      Via: {order.platform || 'Window'}
-                    </p>
-                  </div>
-                  <span className="text-blue-600 font-medium">Normal</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <p>Order #{order.id || order.orderId}</p>
-                  <div className="flex items-center gap-2">
-                    {order.orderTime && (
-                      <span>Ordered: {formatSATime(order.orderTime)}</span>
-                    )}
-                    {!isOrderCompleted(order) && order.dueTime && (
-                      <span className="font-medium">Due: 
-                        <span className={getTimeStatus(order.dueTime)?.status === 'late' ? 'text-red-600' : ''}>
-                          {formatSATime(order.dueTime)}
-                        </span>
-                        {getTimeStatus(order.dueTime) && (
-                          <span className="ml-2 text-xs">
-                            {getTimeStatus(order.dueTime).status === 'late' 
-                              ? `(${getTimeStatus(order.dueTime).minutes}m late)` 
-                              : `(${getTimeStatus(order.dueTime).minutes}m left)`}
-                          </span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {order.pizzas && (
-                  <div className="mt-2">
-                    {order.pizzas.map((pizza, i) => (
-                      <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={order.cooked?.[i] || false}
-                            onClick={(e) => e.stopPropagation()} // Prevent row click when clicking checkbox
-                            onChange={async (e) => {
-                              try {
-                                const cookedArray = [...(order.cooked || Array(order.pizzas.length).fill(false))];
-                                cookedArray[i] = e.target.checked;
-                                const allCooked = cookedArray.every(status => status);
-                                
-                                await updateOrder(order.id || order.orderId, {
-                                  cooked: cookedArray,
-                                  status: allCooked ? 'done' : 'pending',
-                                  completed: allCooked
-                                });
-                                
-                                // If all pizzas are cooked, remove the order from highlighted orders
-                                if (allCooked && isOrderHighlighted(order.id || order.orderId)) {
-                                  toggleOrderHighlight(order.id || order.orderId);
-                                }
-                              } catch (error) {
-                                console.error('Error updating pizza status:', error);
-                              }
-                            }}
-                            className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
-                          />
-                          <span className={order.cooked?.[i] ? 'line-through text-gray-400' : ''}>
-                            {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
-                          </span>
-                        </div>
-                        {pizza.specialInstructions && (
-                          <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
-                        )}
-                        {order.cooked && Array.isArray(order.cooked) && order.cooked[i] && (
-                          <span className="text-green-600 font-medium text-xs">COOKED</span>
-                        )}
-                      </div>
-                    ))}
-                    {order.coldDrinks && order.coldDrinks.length > 0 && (
-                      <div className="mt-2 pt-2 border-t border-gray-200">
-                        <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
-                        {order.coldDrinks.map((drink, idx) => (
-                          <div key={idx} className="text-sm text-blue-600">
-                            {drink.quantity}x {drink.drinkType}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Completed Orders - Grouped by Date */}
-      {showCompleted && groupedOrders.completed.length > 0 && (
-        <div className="mb-8">
-          <h3 className="text-xl font-semibold text-green-600 flex items-center gap-2 mb-4">
-            <span className="inline-block w-3 h-3 bg-green-600 rounded-full"></span>
-            Completed Orders ({groupedOrders.completed.length})
-          </h3>
-          
-          {/* Render orders grouped by date */}
-          {Object.entries(groupedOrders.completedByDate).map(([dateString, dateOrders]) => (
-            <div key={dateString} className="mb-6">
-              <div className="bg-gray-100 p-2 rounded-t-lg border-b border-gray-200">
-                <h4 className="text-md font-medium text-gray-700">
-                  {dateString} ({dateOrders.length} orders)
-                </h4>
-              </div>
-              <div className="grid gap-4 bg-white p-4 rounded-b-lg shadow mb-6">
-                {dateOrders.map(order => (
-                  <div 
-                    key={order.id || order.orderId} 
-                    onClick={() => toggleOrderHighlight(order.id || order.orderId)}
-                    className={`bg-white shadow-sm rounded-lg p-4 border-l-4 border-green-600 
-                      ${isOrderHighlighted(order.id || order.orderId) ? 'ring-2 ring-yellow-400 shadow-lg' : ''}
-                      cursor-pointer transition-all duration-200`}
-                  >
-                    <p className="text-lg font-medium text-purple-600 mb-1">
-                      {order.customerName || 'Anonymous Customer'}
-                    </p>
-                    <p className="text-sm text-gray-600 mb-2">Order #{order.id || order.orderId}</p>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h4 className="font-semibold">{order.customer}</h4>
-                        <p className="text-sm font-medium text-gray-800">
-                          Via: {order.platform || 'Window'}
-                        </p>
-                      </div>
-                      <span className="text-green-600 font-medium">Completed</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        {order.orderTime && (
-                          <span>Ordered: {formatSATime(order.orderTime)}</span>
-                        )}
-                        {order.completionTime && (
-                          <span className="font-medium">Completed: {formatSATime(order.completionTime)}</span>
-                        )}
-                      </div>
-                    </div>
-                    {order.pizzas && (
-                      <div className="mt-2">
-                        {order.pizzas.map((pizza, i) => (
-                          <div key={i} className="text-sm py-1 border-b border-gray-100 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={order.cooked?.[i] || false}
-                                disabled={true}
-                                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded cursor-not-allowed"
-                              />
-                              <span className="line-through text-gray-400">
-                                {pizza.quantity || 1}x {pizza.pizzaType || pizza.type || (typeof pizza === 'string' ? pizza : 'Pizza')}
-                              </span>
-                            </div>
-                            {pizza.specialInstructions && (
-                              <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
-                            )}
-                            {pizza.specialInstructions && (
-                              <div className="text-xs text-orange-600">{pizza.specialInstructions}</div>
-                            )}
-                          </div>
-                        ))}
-                        {order.coldDrinks && order.coldDrinks.length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            <div className="text-xs font-medium text-gray-600 mb-1">Cold Drinks:</div>
-                            {order.coldDrinks.map((drink, idx) => (
-                              <div key={idx} className="text-sm text-blue-600">
-                                {drink.quantity}x {drink.drinkType}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* No Orders Message */}
-      {(sortedOrders.length === 0 || (!showCompleted && groupedOrders.late.length === 0 && 
-        groupedOrders.urgent.length === 0 && groupedOrders.pending.length === 0)) && (
-        <div className="text-center text-gray-500 mt-8 p-8 bg-gray-50 rounded-lg">
-          <p className="text-lg">No active orders at the moment</p>
-          {!showCompleted && groupedOrders.completed.length > 0 && (
-            <p className="mt-2 text-sm">There are {groupedOrders.completed.length} completed orders. Enable "Show Completed Orders" to view them.</p>
-          )}
-        </div>
-      )}
+
+      {/* Use Illovo-style Kitchen Display UI */}
+      <ImprovedKitchenDisplay
+        orders={displayOrders}
+        onStatusChange={handleStatusChange}
+        onPizzaToggle={handlePizzaToggle}
+      />
 
       {/* Waste Reason Modal */}
       <WasteReasonModal

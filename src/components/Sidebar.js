@@ -79,15 +79,18 @@ const Sidebar = ({ setShowOrderForm }) => {
           Inventory Analysis
         </Link>
 
-        <Link
-          to="/stock"
-          className={`flex items-center px-4 py-3 text-gray-300 hover:bg-primary hover:bg-opacity-10 ${isActive('/stock')}`}
-        >
-          <svg className="w-5 h-5 mr-3" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
-            <path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
-          </svg>
-          📦 Update Stock
-        </Link>
+        {/* PROMINENT DAILY STOCK ENTRY BUTTON */}
+        <div className="px-4 mt-2 mb-2">
+          <Link
+            to="/stock"
+            className={`flex items-center justify-center px-4 py-3 bg-accent-green hover:bg-green-600 text-white font-semibold rounded-lg transition-colors duration-200 shadow-lg hover:shadow-xl ${isActive('/stock') ? 'ring-2 ring-primary' : ''}`}
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+            📦 Daily Stock Entry
+          </Link>
+        </div>
 
         <Link
           to="/analytics"

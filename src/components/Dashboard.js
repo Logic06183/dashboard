@@ -9,6 +9,7 @@ import CustomersPage from './pages/CustomersPage';
 import OrdersPage from './pages/OrdersPage';
 import SettingsPage from './pages/SettingsPage';
 import InventoryPage from './pages/InventoryPage';
+import SimpleInventoryPage from './pages/SimpleInventoryPage';
 // Switch from Firestore to API-based data fetching
 import { useApi } from '../hooks/useApi';
 import CountdownTimer from './CountdownTimer';
@@ -104,6 +105,12 @@ const Dashboard = () => {
       name: 'Dashboard',
       icon: <MdDashboard className="w-6 h-6" />,
       path: '/',
+    },
+    {
+      name: '📦 Daily Stock Entry',
+      icon: <MdInventory className="w-6 h-6 text-green-600" />,
+      path: '/stock',
+      highlight: true, // Special highlighting for important page
     },
     {
       name: 'Customers',
@@ -242,6 +249,7 @@ const Dashboard = () => {
             />
             <Route path="/customers" element={<CustomersPage orders={orders} />} />
             <Route path="/orders" element={<OrdersPage orders={orders} addOrder={addOrder} updateOrder={updateOrder} removeOrder={removeOrder} archivedOrders={archivedOrders} />} />
+            <Route path="/stock" element={<SimpleInventoryPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route 
               path="/analytics" 

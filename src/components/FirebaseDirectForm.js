@@ -5,6 +5,8 @@ import 'firebase/compat/firestore';
 import CustomerSelector from './CustomerSelector';
 import customerService from '../services/CustomerService';
 import useQueueCalculator from '../hooks/useQueueCalculator';
+import { deductInventoryForOrder } from '../services/FirebaseService';
+import TutorialOverlay from './TutorialOverlay';
 
 // Direct Firebase configuration - matching successful tests
 const firebaseConfig = {
@@ -120,7 +122,79 @@ const FirebaseDirectForm = ({ onClose }) => {
   // Use refs to track component mounted state
   const isMounted = useRef(true);
   const searchDebounceRef = useRef(null);
-  
+
+  // Tutorial steps for new order creation
+  const orderTutorialSteps = [
+    {
+      icon: '🍕',
+      title: 'Welcome to Order Creation!',
+      description: 'This is where you create new pizza orders. Let\'s walk through the process step by step.',
+      tips: [
+        'You can close this tutorial anytime',
+        'Click the info button to restart it later'
+      ]
+    },
+    {
+      icon: '👤',
+      title: 'Customer Information',
+      description: 'Start by entering the customer\'s name in the text field. You can either type freely or switch to customer search to find existing customers.',
+      tips: [
+        'Simple name entry is default',
+        'Switch to search for repeat customers',
+        'Customer names help track orders'
+      ]
+    },
+    {
+      icon: '🚗',
+      title: 'Choose Delivery Method',
+      description: 'Select how the order will be delivered: Window (walk-in), Uber Eats, Mr D Food, Bolt Food, Customer Pickup, Staff, or Other.',
+      tips: [
+        'Window is for walk-in customers',
+        'Platform choice affects prep time estimates'
+      ]
+    },
+    {
+      icon: '⏱️',
+      title: 'Set Prep Time',
+      description: 'The system automatically suggests a prep time based on the current queue, but you can adjust it manually if needed.',
+      tips: [
+        'Default is 15 minutes',
+        'System shows queue size to help estimate',
+        'Longer times for peak hours'
+      ]
+    },
+    {
+      icon: '🍕',
+      title: 'Add Pizzas',
+      description: 'Click "Add First Pizza" to start building your order. Select the pizza type from the dropdown, set the quantity, and add special instructions if needed. You can add multiple different pizzas to one order!',
+      tips: [
+        'Choose pizza type from the menu',
+        'Add multiple pizzas per order',
+        'Special instructions are optional'
+      ]
+    },
+    {
+      icon: '🥤',
+      title: 'Add Cold Drinks (Optional)',
+      description: 'Click "+ Add Cold Drink" to include beverages in the order. Select the drink type and quantity.',
+      tips: [
+        'Drinks are optional',
+        'Add as many as needed',
+        'Popular choices: Coke, Sprite, Appletizer'
+      ]
+    },
+    {
+      icon: '💰',
+      title: 'Review & Place Order',
+      description: 'The order summary shows total items and price. When ready, click "Place Order" to submit. The system will automatically deduct ingredients from inventory!',
+      tips: [
+        'Order summary shows total cost',
+        'Inventory deducts automatically',
+        'You\'ll see a success message when done'
+      ]
+    }
+  ];
+
   // Initialize Firebase once on component mount
   useEffect(() => {
     console.log('Initializing Firebase with stable pattern...');
@@ -424,7 +498,25 @@ const FirebaseDirectForm = ({ onClose }) => {
       const docRef = await freshDb.collection('orders').add(order);
       
       console.log('Order submitted successfully! ID:', docRef.id);
-      
+
+      // Deduct inventory for this order
+      try {
+        console.log('Deducting inventory for order...');
+        const inventoryResult = await deductInventoryForOrder(order);
+
+        if (inventoryResult.success) {
+          console.log('Inventory deducted:', inventoryResult.deductions);
+          if (inventoryResult.warnings && inventoryResult.warnings.length > 0) {
+            console.warn('Inventory warnings:', inventoryResult.warnings);
+          }
+        } else {
+          console.error('Inventory deduction failed:', inventoryResult.error);
+        }
+      } catch (error) {
+        console.error('Error deducting inventory:', error);
+        // Don't fail the order if inventory deduction fails
+      }
+
       // Track window customer orders for delay notifications
       if (orderData.platform === 'Window' && pizzaItems.length > 0) {
         // Import queue calculator to track this order
@@ -433,7 +525,7 @@ const FirebaseDirectForm = ({ onClose }) => {
         const estimatedTime = calculateEstimatedPrepTime(totalPizzas);
         queueCalculator.default.trackWindowOrderEstimate(docRef.id, customer.name, estimatedTime);
       }
-      
+
       // Update customer statistics if we have a valid customer
       if (customer.id) {
         try {
@@ -484,6 +576,13 @@ const FirebaseDirectForm = ({ onClose }) => {
   
   return (
     <div className="p-6 bg-white rounded-lg shadow max-w-md mx-auto">
+      {/* Order Creation Tutorial */}
+      <TutorialOverlay
+        steps={orderTutorialSteps}
+        tutorialKey="order_creation"
+        autoStart={true}
+      />
+
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800">Simple Direct Order</h2>
         {onClose && (

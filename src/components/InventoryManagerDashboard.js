@@ -6,6 +6,7 @@ import BulkStockUpdateModal from './BulkStockUpdateModal';
 import EndOfDayModal from './EndOfDayModal';
 import NotificationSettings from './NotificationSettings';
 import DailyNotificationService from '../services/DailyNotificationService';
+import FirebaseService from '../services/FirebaseService';
 
 const InventoryManagerDashboard = () => {
   const [managerEmail, setManagerEmail] = useState('');
@@ -26,21 +27,13 @@ const InventoryManagerDashboard = () => {
   useEffect(() => {
     const loadCurrentInventory = async () => {
       try {
-        const { db } = await import('../firebase');
-        const inventoryRef = db.collection('inventory');
-        const inventorySnapshot = await inventoryRef.get();
-        
-        const inventoryData = {};
-        inventorySnapshot.forEach((doc) => {
-          inventoryData[doc.id] = doc.data();
-        });
-        
+        const inventoryData = await FirebaseService.getInventory();
         setCurrentInventory(inventoryData);
       } catch (error) {
         console.error('Error loading inventory for daily reports:', error);
       }
     };
-    
+
     loadCurrentInventory();
   }, []);
 
@@ -317,69 +310,56 @@ const InventoryManagerDashboard = () => {
   // Handle bulk stock update
   const handleBulkStockUpdate = async (changes) => {
     try {
-      // Import Firebase service
-      const { db } = await import('../firebase');
-      const batch = db.batch();
-      
+      // Get current inventory and merge changes
+      const currentData = await FirebaseService.getInventory();
+      const updatedInventory = { ...currentData };
+
+      // Apply changes
       Object.entries(changes).forEach(([ingredient, data]) => {
-        const docRef = db.collection('inventory').doc(ingredient);
-        batch.set(docRef, data, { merge: true });
+        updatedInventory[ingredient] = {
+          ...updatedInventory[ingredient],
+          ...data
+        };
       });
-      
-      await batch.commit();
-      
+
+      // Update inventory in Firebase
+      await FirebaseService.updateInventory(updatedInventory);
+
       // Reload inventory
-      const inventoryRef = db.collection('inventory');
-      const inventorySnapshot = await inventoryRef.get();
-      const inventoryData = {};
-      inventorySnapshot.forEach((doc) => {
-        inventoryData[doc.id] = doc.data();
-      });
+      const inventoryData = await FirebaseService.getInventory();
       setCurrentInventory(inventoryData);
-      
-      setEmailStatus({ 
-        message: `Updated ${Object.keys(changes).length} ingredients successfully!`, 
-        type: 'success' 
+
+      setEmailStatus({
+        message: `Updated ${Object.keys(changes).length} ingredients successfully!`,
+        type: 'success'
       });
       setTimeout(() => setEmailStatus({ message: '', type: '' }), 3000);
-      
+
     } catch (error) {
       console.error('Error updating bulk stock:', error);
-      setEmailStatus({ 
-        message: 'Failed to update inventory: ' + error.message, 
-        type: 'error' 
+      setEmailStatus({
+        message: 'Failed to update inventory: ' + error.message,
+        type: 'error'
       });
       setTimeout(() => setEmailStatus({ message: '', type: '' }), 5000);
     }
   };
   
   // Handle end of day completion
-  const handleEndOfDayComplete = (result) => {
+  const handleEndOfDayComplete = async (result) => {
     console.log('End of day processing completed:', result);
-    
+
     // Reload inventory after processing
-    const loadCurrentInventory = async () => {
-      try {
-        const { db } = await import('../firebase');
-        const inventoryRef = db.collection('inventory');
-        const inventorySnapshot = await inventoryRef.get();
-        
-        const inventoryData = {};
-        inventorySnapshot.forEach((doc) => {
-          inventoryData[doc.id] = doc.data();
-        });
-        
-        setCurrentInventory(inventoryData);
-      } catch (error) {
-        console.error('Error reloading inventory:', error);
-      }
-    };
-    
-    loadCurrentInventory();
-    
-    setEmailStatus({ 
-      message: `End of day processing completed! ${result.ordersProcessed} orders processed, ${result.ingredientsUpdated} ingredients updated.`, 
-      type: 'success' 
+    try {
+      const inventoryData = await FirebaseService.getInventory();
+      setCurrentInventory(inventoryData);
+    } catch (error) {
+      console.error('Error reloading inventory:', error);
+    }
+
+    setEmailStatus({
+      message: `End of day processing completed! ${result.ordersProcessed} orders processed, ${result.ingredientsUpdated} ingredients updated.`,
+      type: 'success'
     });
     setTimeout(() => setEmailStatus({ message: '', type: '' }), 5000);
   };

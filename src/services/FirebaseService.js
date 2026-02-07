@@ -732,6 +732,152 @@ export const updateInventory = async (inventory) => {
 };
 
 /**
+ * Deduct inventory based on an order
+ * @param {Object} order - The order object containing pizzas and drinks
+ * @returns {Promise<Object>} Object with success status and deducted amounts
+ */
+export const deductInventoryForOrder = async (order) => {
+  try {
+    log('Deducting inventory for order:', order.id || 'new order');
+
+    // Import ingredients data
+    const { PIZZA_INGREDIENTS } = await import('../data/ingredients');
+
+    // Get current inventory
+    const currentInventory = await getInventory();
+
+    // Track what we're deducting for logging
+    const deductions = {};
+    const warnings = [];
+
+    // Process each pizza in the order
+    if (order.pizzas && Array.isArray(order.pizzas)) {
+      for (const pizza of order.pizzas) {
+        const pizzaType = pizza.pizzaType;
+        const quantity = pizza.quantity || 1;
+
+        log(`Processing ${quantity}x ${pizzaType}`);
+
+        // Find the recipe for this pizza
+        const recipe = PIZZA_INGREDIENTS.pizzas[pizzaType];
+
+        if (!recipe) {
+          warnings.push(`No recipe found for ${pizzaType}`);
+          continue;
+        }
+
+        // Deduct ingredients for this pizza
+        if (recipe.ingredients) {
+          Object.entries(recipe.ingredients).forEach(([ingredientName, details]) => {
+            const amountNeeded = details.amount * quantity;
+
+            // Track deductions
+            if (!deductions[ingredientName]) {
+              deductions[ingredientName] = { amount: 0, unit: details.unit };
+            }
+            deductions[ingredientName].amount += amountNeeded;
+
+            // Deduct from inventory
+            if (currentInventory[ingredientName]) {
+              const currentAmount = currentInventory[ingredientName].amount || 0;
+              const newAmount = Math.max(0, currentAmount - amountNeeded);
+
+              currentInventory[ingredientName] = {
+                ...currentInventory[ingredientName],
+                amount: newAmount
+              };
+
+              // Warn if we're going negative (but still allow the order)
+              if (newAmount === 0 && currentAmount < amountNeeded) {
+                warnings.push(`Insufficient ${ingredientName}: needed ${amountNeeded}${details.unit}, had ${currentAmount}${details.unit}`);
+              }
+            } else {
+              // Ingredient not in inventory - create entry with 0 (negative stock)
+              warnings.push(`${ingredientName} not found in inventory - creating entry`);
+              currentInventory[ingredientName] = {
+                amount: 0,
+                unit: details.unit,
+                category: details.category || 'other',
+                threshold: 100
+              };
+            }
+          });
+        }
+      }
+    }
+
+    // Process cold drinks (deduct finished beverage bottles/cans)
+    if (order.coldDrinks && Array.isArray(order.coldDrinks)) {
+      for (const drink of order.coldDrinks) {
+        const drinkType = drink.drinkType;
+        const quantity = drink.quantity || 1;
+
+        log(`Processing ${quantity}x ${drinkType}`);
+
+        // Find the drink recipe
+        const drinkRecipe = PIZZA_INGREDIENTS.coldDrinks[drinkType];
+
+        if (drinkRecipe && drinkRecipe.ingredients) {
+          Object.entries(drinkRecipe.ingredients).forEach(([ingredientName, details]) => {
+            const amountNeeded = details.amount * quantity;
+
+            // Track deductions
+            if (!deductions[ingredientName]) {
+              deductions[ingredientName] = { amount: 0, unit: details.unit };
+            }
+            deductions[ingredientName].amount += amountNeeded;
+
+            // Deduct from inventory
+            if (currentInventory[ingredientName]) {
+              const currentAmount = currentInventory[ingredientName].amount || 0;
+              const newAmount = Math.max(0, currentAmount - amountNeeded);
+
+              currentInventory[ingredientName] = {
+                ...currentInventory[ingredientName],
+                amount: newAmount
+              };
+
+              if (newAmount === 0 && currentAmount < amountNeeded) {
+                warnings.push(`Insufficient ${ingredientName}: needed ${amountNeeded}${details.unit}, had ${currentAmount}${details.unit}`);
+              }
+            } else {
+              warnings.push(`${ingredientName} not found in inventory - creating entry`);
+              currentInventory[ingredientName] = {
+                amount: 0,
+                unit: details.unit,
+                category: details.category || 'beverage_finished',
+                threshold: 10
+              };
+            }
+          });
+        }
+      }
+    }
+
+    // Save updated inventory
+    await updateInventory(currentInventory);
+
+    log('Inventory deducted successfully', { deductions, warnings });
+
+    return {
+      success: true,
+      deductions,
+      warnings
+    };
+
+  } catch (error) {
+    errorLog('Error deducting inventory:', error);
+    // Don't throw - we don't want to fail the order if inventory deduction fails
+    return {
+      success: false,
+      error: error.message,
+      deductions: {},
+      warnings: ['Failed to deduct inventory - order still created']
+    };
+  }
+};
+
+/**
  * Subscribe to real-time inventory updates
  * @param {Function} callback - Function to call with updated inventory
  * @returns {Function} Unsubscribe function
@@ -739,9 +885,9 @@ export const updateInventory = async (inventory) => {
 export const subscribeToInventory = (callback) => {
   try {
     log('Setting up real-time inventory subscription');
-    
+
     const inventoryRef = doc(db, INVENTORY_COLLECTION, 'current');
-    
+
     return onSnapshot(inventoryRef, {
       next: (docSnapshot) => {
         if (docSnapshot.exists()) {
@@ -791,6 +937,7 @@ const FirebaseService = {
   // Inventory functions
   getInventory,
   updateInventory,
+  deductInventoryForOrder,
   subscribeToInventory
 };
 
