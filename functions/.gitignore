@@ -1,0 +1,9 @@
+node_modules/
+npm-debug.log
+
+# Don't commit config if it has real API keys
+# (For now it's safe since it has placeholders)
+# config.js
+
+# Firebase cache
+.firebase/
