@@ -20,6 +20,12 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Auto-expand all orders on mount and when new orders arrive
+  useEffect(() => {
+    const allOrderIds = new Set(orders.map(order => order.id || order.orderId));
+    setExpandedOrders(allOrderIds);
+  }, [orders]);
+
   // Update current time every second for countdown
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
