@@ -229,67 +229,56 @@ export const PIZZA_INGREDIENTS = {
     }
   },
   
-  // Cold drinks ingredient mapping
+  // Cold drinks - simplified to track actual purchased beverages only
   coldDrinks: {
     'Coca-Cola 330ml': {
       ingredients: {
-        'coke_syrup': { unit: 'ml', amount: 40, category: 'beverage_ingredient', cost: 0.08 },
-        'carbonated_water': { unit: 'ml', amount: 290, category: 'beverage_ingredient', cost: 0.02 },
-        'disposable_cup': { unit: 'piece', amount: 1, category: 'packaging', cost: 0.12 }
+        'coca_cola_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
       }
     },
     'Coke Zero 330ml': {
       ingredients: {
-        'coke_zero_syrup': { unit: 'ml', amount: 40, category: 'beverage_ingredient', cost: 0.08 },
-        'carbonated_water': { unit: 'ml', amount: 290, category: 'beverage_ingredient', cost: 0.02 },
-        'disposable_cup': { unit: 'piece', amount: 1, category: 'packaging', cost: 0.12 }
+        'coke_zero_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
       }
     },
     'Sprite 330ml': {
       ingredients: {
-        'sprite_syrup': { unit: 'ml', amount: 40, category: 'beverage_ingredient', cost: 0.07 },
-        'carbonated_water': { unit: 'ml', amount: 290, category: 'beverage_ingredient', cost: 0.02 },
-        'disposable_cup': { unit: 'piece', amount: 1, category: 'packaging', cost: 0.12 }
+        'sprite_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
       }
     },
     'Fanta Orange 330ml': {
       ingredients: {
-        'fanta_syrup': { unit: 'ml', amount: 40, category: 'beverage_ingredient', cost: 0.07 },
-        'carbonated_water': { unit: 'ml', amount: 290, category: 'beverage_ingredient', cost: 0.02 },
-        'disposable_cup': { unit: 'piece', amount: 1, category: 'packaging', cost: 0.12 }
+        'fanta_orange_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
       }
     },
     'Appletizer 330ml': {
       ingredients: {
-        'appletizer_bottle': { unit: 'piece', amount: 1, category: 'beverage_finished', cost: 18.50 }
+        'appletizer_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 18.50 }
       }
     },
     'Grapetizer 330ml': {
       ingredients: {
-        'grapetizer_bottle': { unit: 'piece', amount: 1, category: 'beverage_finished', cost: 18.50 }
+        'grapetizer_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 18.50 }
       }
     },
     'Still Water 500ml': {
       ingredients: {
-        'water_bottle_500ml': { unit: 'piece', amount: 1, category: 'beverage_finished', cost: 12.00 }
+        'still_water_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 12.00 }
       }
     },
     'Sparkling Water 500ml': {
       ingredients: {
-        'sparkling_water_bottle': { unit: 'piece', amount: 1, category: 'beverage_finished', cost: 14.00 }
+        'sparkling_water_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 14.00 }
       }
     },
     'Ice Tea 500ml': {
       ingredients: {
-        'ice_tea_concentrate': { unit: 'ml', amount: 100, category: 'beverage_ingredient', cost: 0.15 },
-        'water': { unit: 'ml', amount: 400, category: 'beverage_ingredient', cost: 0.01 },
-        'ice': { unit: 'g', amount: 50, category: 'beverage_ingredient', cost: 0.02 },
-        'disposable_cup_500ml': { unit: 'piece', amount: 1, category: 'packaging', cost: 0.15 }
+        'ice_tea_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 16.00 }
       }
     },
     'Red Bull 250ml': {
       ingredients: {
-        'red_bull_can': { unit: 'piece', amount: 1, category: 'beverage_finished', cost: 25.00 }
+        'red_bull_250ml': { unit: 'can', amount: 1, category: 'beverage_finished', cost: 25.00 }
       }
     }
   },
