@@ -149,12 +149,25 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
     const pizzas = order.pizzas || [];
     const allCooked = pizzas.every((pizza, idx) => order.cooked?.[idx] || pizza.isCooked);
 
+    // Flash animation for very late orders
+    const isVeryLate = urgency.status === 'VERY LATE';
+
     return (
       <motion.div
         key={orderId}
         layout
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{
+          opacity: 1,
+          y: 0,
+          // Flash animation for very late orders
+          backgroundColor: isVeryLate ? ['#fef2f2', '#fee2e2', '#fef2f2'] : '#fef2f2',
+          borderColor: isVeryLate ? ['#ef4444', '#dc2626', '#ef4444'] : undefined
+        }}
+        transition={{
+          backgroundColor: { duration: 1.5, repeat: isVeryLate ? Infinity : 0, ease: 'easeInOut' },
+          borderColor: { duration: 1.5, repeat: isVeryLate ? Infinity : 0, ease: 'easeInOut' }
+        }}
         exit={{ opacity: 0, y: -20 }}
         className={`mb-4 rounded-lg border-l-4 ${urgency.borderColor} ${urgency.bgColor} shadow-md hover:shadow-lg transition-shadow`}
       >
@@ -167,8 +180,9 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
             {/* Left Section - Status & Info */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
-                {/* Urgency Badge */}
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${urgency.badgeBg} ${urgency.badgeText}`}>
+                {/* Urgency Badge with pulse animation for very late */}
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${urgency.badgeBg} ${urgency.badgeText} ${isVeryLate ? 'animate-pulse' : ''}`}>
+                  {isVeryLate && '🚨 '}
                   {urgency.status}
                 </span>
 
@@ -229,10 +243,12 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
                   <h4 className="font-semibold text-gray-700 mb-2">Pizzas:</h4>
                   {pizzas.map((pizza, index) => {
                     const isCooked = order.cooked?.[index] || pizza.isCooked || false;
+                    const rowNumber = pizza.rowNumber || pizza.row;
+
                     return (
                       <div
                         key={index}
-                        className="flex items-start gap-3 p-2 rounded hover:bg-white transition-colors"
+                        className="flex items-start gap-3 p-3 rounded hover:bg-white transition-colors border border-gray-200"
                       >
                         <input
                           type="checkbox"
@@ -241,8 +257,16 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
                           className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                         />
                         <div className="flex-1">
-                          <div className={`font-medium ${isCooked ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                            {pizza.pizzaType || pizza.name} {pizza.quantity > 1 && `(x${pizza.quantity})`}
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className={`font-semibold text-lg ${isCooked ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+                              {pizza.pizzaType || pizza.name} {pizza.quantity > 1 && `(x${pizza.quantity})`}
+                            </div>
+                            {/* Prominent Row Number Badge */}
+                            {rowNumber && (
+                              <span className="inline-flex items-center justify-center px-4 py-2 text-xl font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg shadow-lg border-2 border-amber-600 min-w-[80px]">
+                                ROW {rowNumber}
+                              </span>
+                            )}
                           </div>
                           {pizza.toppings && pizza.toppings.length > 0 && (
                             <div className="text-sm text-gray-600">
