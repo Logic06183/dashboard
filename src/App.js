@@ -5,7 +5,6 @@ import KitchenDisplayPage from './components/pages/KitchenDisplayPage';
 import InventoryPage from './components/pages/InventoryPage';
 import SimpleInventoryPage from './components/pages/SimpleInventoryPage';
 import OrdersPage from './components/pages/OrdersPage';
-import AnalyticsPage from './components/pages/AnalyticsPage';
 import SettingsPage from './components/pages/SettingsPage';
 import WasteManagementPage from './components/pages/WasteManagementPage';
 import Sidebar from './components/Sidebar';
@@ -103,11 +102,10 @@ function App() {
               />} />
               <Route path="/inventory" element={<InventoryPage />} />
               <Route path="/stock" element={<SimpleInventoryPage />} />
-              <Route path="/orders" element={<OrdersPage 
+              <Route path="/orders" element={<OrdersPage
                 onStatusChange={handleStatusChange}
                 onArchiveOrder={handleArchiveOrder}
               />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
               <Route path="/waste" element={<WasteManagementPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/cleanup" element={<OrderCleanupUtility />} />

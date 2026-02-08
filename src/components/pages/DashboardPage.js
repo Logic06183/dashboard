@@ -273,7 +273,7 @@ const DashboardPage = () => {
         {/* Quick Actions */}
         <section>
           <h2 className="text-2xl font-bold text-gray-800 mb-4">⚡ Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <QuickActionCard
               title="New Order"
               description="Create a new pizza order"
@@ -289,18 +289,11 @@ const DashboardPage = () => {
               onClick={() => window.location.hash = '#/stock'}
             />
             <QuickActionCard
-              title="View Customers"
-              description="Manage customer database"
-              icon="👥"
-              color="border-purple-500"
-              onClick={() => window.location.hash = '#/customers'}
-            />
-            <QuickActionCard
-              title="Analytics"
-              description="View detailed reports"
-              icon="📊"
+              title="Kitchen Display"
+              description="View active orders"
+              icon="👨‍🍳"
               color="border-orange-500"
-              onClick={() => window.location.hash = '#/analytics'}
+              onClick={() => window.location.hash = '#/kitchen'}
             />
           </div>
         </section>
