@@ -36,21 +36,21 @@ const PizzaMenu = ({ onOrderClick }) => {
     {
       id: 'chick-tick-boom',
       name: "CHICK TICK BOOM!",
-      price: 155.00,
+      price: 149.00,
       description: "Spicy chicken tikka, sweet peppadews, and a burst of fresh coriander dance on a delicious crust.",
       ingredients: ["Spicy chicken tikka", "Sweet peppadews", "Fresh coriander"]
     },
     {
       id: 'mish-mash',
       name: "MISH-MASH",
-      price: 149.00,
+      price: 169.00,
       description: "Parma ham, fig jam, oh damn! Finished with goat's cheese and rocket.",
       ingredients: ["Parma ham", "Fig jam", "Goat's cheese", "Rocket"]
     },
     {
       id: 'poppas',
       name: "POPPA'S",
-      price: 169.00,
+      price: 159.00,
       description: "Bacon, pepperoni, biltong, peppadews, shredded mozzarella, red onion, Mrs Ball's Chutney and feta.",
       ingredients: ["Bacon", "Pepperoni", "Biltong", "Peppadews", "Shredded mozzarella", "Red onion", "Mrs Ball's Chutney", "Feta"]
     },
@@ -64,7 +64,7 @@ const PizzaMenu = ({ onOrderClick }) => {
     {
       id: 'artichoke-ham',
       name: "ARTICHOKE & HAM",
-      price: 159.00,
+      price: 155.00,
       description: "Shredded mozzarella, ham, mushrooms, artichoke & olives. A taste sensation, or just dinner, depending on your standards.",
       ingredients: ["Shredded mozzarella", "Ham", "Mushrooms", "Artichoke", "Olives"]
     },
@@ -78,7 +78,7 @@ const PizzaMenu = ({ onOrderClick }) => {
     {
       id: 'mediterranean',
       name: "MEDITERRANEAN",
-      price: 165.00,
+      price: 159.00,
       description: "Earthy mushrooms, zucchini, olives, sun-dried tomatoes, herbs, hummus, olive oil. (Cheese? Never heard of it.)",
       ingredients: ["Mushrooms", "Zucchini", "Olives", "Sun-dried tomatoes", "Herbs", "Hummus", "Olive oil"]
     },
@@ -92,14 +92,14 @@ const PizzaMenu = ({ onOrderClick }) => {
     {
       id: 'owen',
       name: "OWEN!",
-      price: 159.00,
+      price: 99.00,
       description: "For little pizza lovers! Sauce and lots of shredded cheese on our sourdough rolled base that's good for the gut.",
       ingredients: ["Pizza sauce", "Shredded cheese", "Sourdough base"]
     },
     {
       id: 'caprese',
       name: "CAPRESE",
-      price: 155.00,
+      price: 129.00,
       description: "Fresh mozzarella, vibrant tomatoes, balsamic glaze and basil pesto on our signature crust.",
       ingredients: ["Fresh mozzarella", "Vibrant tomatoes", "Balsamic glaze", "Basil pesto"]
     },
@@ -141,7 +141,7 @@ const PizzaMenu = ({ onOrderClick }) => {
     {
       id: 'quattro-formaggi',
       name: "QUATTRO FORMAGGI",
-      price: 159.00,
+      price: 155.00,
       description: "A four-cheese feast of shredded mozzarella, provolone, blue cheese, and Parmesan, plus red onion and fig jam. Great pizza, questionable date choice.",
       ingredients: ["Shredded mozzarella", "Provolone", "Blue cheese", "Parmesan", "Red onion", "Fig jam"]
     },

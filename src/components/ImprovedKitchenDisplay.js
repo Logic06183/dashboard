@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
  * - Status action buttons
  */
 
-const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) => {
+const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle, onMarkAsWaste, viewMode = 'grid' }) => {
   const [expandedOrders, setExpandedOrders] = useState(new Set());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,9 +111,10 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
     return styles[platform] || 'bg-gray-600 text-white';
   };
 
-  // Filter and sort orders by urgency and time
+  // Filter and sort orders by time only (no urgency sorting to prevent orders from jumping around)
+  // Only show orders actively being prepared (exclude ready, completed, delivered)
   const sortedOrders = [...orders]
-    .filter(order => !['completed', 'delivered'].includes(order.status?.toLowerCase()))
+    .filter(order => !['ready', 'completed', 'delivered'].includes(order.status?.toLowerCase()))
     .filter(order => {
       // Search filter
       if (!searchQuery.trim()) return true;
@@ -128,20 +129,21 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
              platform.includes(query);
     })
     .sort((a, b) => {
-      const urgencyA = getUrgencyStatus(a.dueTime);
-      const urgencyB = getUrgencyStatus(b.dueTime);
+      const now = new Date();
+      const dueA = new Date(a.dueTime);
+      const dueB = new Date(b.dueTime);
+      const lateA = dueA < now;
+      const lateB = dueB < now;
 
-      const urgencyPriority = { 'VERY LATE': 1, 'LATE': 2, 'ON TIME': 3, 'Unknown': 4 };
-      const priorityDiff = urgencyPriority[urgencyA.status] - urgencyPriority[urgencyB.status];
+      // Late orders always appear first
+      if (lateA && !lateB) return -1;
+      if (!lateA && lateB) return 1;
 
-      if (priorityDiff !== 0) return priorityDiff;
-
-      const timeA = new Date(a.orderTime || a.createdAt);
-      const timeB = new Date(b.orderTime || b.createdAt);
-      return timeA - timeB;
+      // Within same group, sort by due time (soonest first)
+      return dueA - dueB;
     });
 
-  // Render order card
+  // Render order card in grid block style
   const renderOrderCard = (order) => {
     const isExpanded = expandedOrders.has(order.id || order.orderId);
     const urgency = getUrgencyStatus(order.dueTime);
@@ -149,85 +151,143 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
     const pizzas = order.pizzas || [];
     const allCooked = pizzas.every((pizza, idx) => order.cooked?.[idx] || pizza.isCooked);
 
-    // Flash animation for very late orders
+    // Flash animation for late and very late orders
     const isVeryLate = urgency.status === 'VERY LATE';
+    const isLate = urgency.status === 'LATE';
+    const isAnyLate = isVeryLate || isLate;
+
+    // Determine card status badge
+    let statusBadge = 'QUEUE';
+    let statusBadgeClass = 'bg-gray-700 text-white';
+
+    if (order.status === 'ready') {
+      statusBadge = 'READY';
+      statusBadgeClass = 'bg-purple-600 text-white';
+    } else if (allCooked) {
+      statusBadge = 'FINISHING';
+      statusBadgeClass = 'bg-blue-600 text-white';
+    } else if (pizzas.some((pizza, idx) => order.cooked?.[idx] || pizza.isCooked)) {
+      statusBadge = 'COOKING';
+      statusBadgeClass = 'bg-orange-600 text-white';
+    } else if (isVeryLate) {
+      statusBadge = 'DELAYED';
+      statusBadgeClass = 'bg-red-600 text-white';
+    }
 
     return (
       <motion.div
         key={orderId}
         layout
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95 }}
         animate={{
           opacity: 1,
-          y: 0,
-          // Flash animation for very late orders
-          backgroundColor: isVeryLate ? ['#fef2f2', '#fee2e2', '#fef2f2'] : '#fef2f2',
-          borderColor: isVeryLate ? ['#ef4444', '#dc2626', '#ef4444'] : undefined
+          scale: 1
         }}
-        transition={{
-          backgroundColor: { duration: 1.5, repeat: isVeryLate ? Infinity : 0, ease: 'easeInOut' },
-          borderColor: { duration: 1.5, repeat: isVeryLate ? Infinity : 0, ease: 'easeInOut' }
-        }}
-        exit={{ opacity: 0, y: -20 }}
-        className={`mb-4 rounded-lg border-l-4 ${urgency.borderColor} ${urgency.bgColor} shadow-md hover:shadow-lg transition-shadow`}
+        exit={{ opacity: 0, scale: 0.95 }}
+        className={`bg-white rounded-lg shadow-md hover:shadow-xl transition-all overflow-hidden border-t-4 ${urgency.borderColor} ${isVeryLate ? 'ring-4 ring-red-500 animate-pulse' : isLate ? 'ring-2 ring-orange-400 animate-pulse' : ''} flex flex-col h-full`}
       >
-        {/* Card Header - Always Visible */}
-        <div
-          className="p-4 cursor-pointer select-none"
-          onClick={() => toggleOrder(orderId)}
-        >
-          <div className="flex items-start justify-between gap-4">
-            {/* Left Section - Status & Info */}
+        {/* Card Header */}
+        <div className="p-3 border-b border-gray-200">
+          <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                {/* Urgency Badge with pulse animation for very late */}
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${urgency.badgeBg} ${urgency.badgeText} ${isVeryLate ? 'animate-pulse' : ''}`}>
-                  {isVeryLate && '🚨 '}
-                  {urgency.status}
-                </span>
-
-                {/* Platform Badge */}
+              {/* Customer Name - BIGGER */}
+              <div className="text-lg font-bold text-gray-900 mb-1 truncate">
+                {order.customerName || 'Walk-in Customer'}
+              </div>
+              {/* Order # - smaller */}
+              <div className="text-xs text-gray-500">
+                #{orderId.slice(-4).toUpperCase()}
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">
                 {order.platform && (
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getPlatformStyle(order.platform)}`}>
+                  <span className={`inline-block px-1.5 py-0.5 rounded text-xs font-semibold ${getPlatformStyle(order.platform)}`}>
                     {order.platform}
                   </span>
                 )}
-
-                {/* Customer Name */}
-                <span className="font-semibold text-gray-900 truncate">
-                  {order.customerName || 'Walk-in Customer'}
-                </span>
-              </div>
-
-              {/* Order Details */}
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span className="font-medium">
-                  Due: {order.dueTime ? new Date(order.dueTime).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
-                </span>
-                <span className={`font-semibold ${urgency.textColor}`}>
-                  ({formatTimeRemaining(order.dueTime)})
-                </span>
-                <span>
-                  Order #{String(orderId).substring(0, 6)}
-                </span>
               </div>
             </div>
 
-            {/* Right Section - Expand Icon */}
-            <div className="flex-shrink-0">
-              <svg
-                className={`w-6 h-6 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+            {/* Status Badge */}
+            <div>
+              <span className={`inline-block px-2 py-1 rounded text-xs font-bold uppercase ${statusBadgeClass}`}>
+                {statusBadge}
+              </span>
             </div>
+          </div>
+
+          {/* Due Time */}
+          <div className="flex items-center justify-between text-xs">
+            <span className={`font-semibold ${urgency.textColor}`}>
+              Due: {order.dueTime ? new Date(order.dueTime).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+            </span>
+            <span className={`font-bold ${isAnyLate ? 'animate-pulse' : ''} ${urgency.textColor}`}>
+              {formatTimeRemaining(order.dueTime)}
+            </span>
           </div>
         </div>
 
-        {/* Expanded Content */}
+        {/* Pizza List */}
+        <div
+          className="p-3 space-y-1 cursor-pointer select-none bg-gray-50 flex-1 flex flex-col"
+          onClick={() => toggleOrder(orderId)}
+        >
+          {pizzas.map((pizza, index) => {
+            const isCooked = order.cooked?.[index] || pizza.isCooked || false;
+
+            return (
+              <div key={index} className="text-xs">
+                <div className="flex items-start gap-1">
+                  <input
+                    type="checkbox"
+                    checked={isCooked}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      onPizzaToggle && onPizzaToggle(orderId, index, !isCooked);
+                    }}
+                    className="mt-0.5 h-3 w-3 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer flex-shrink-0"
+                  />
+                  <div className={`flex-1 ${isCooked ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                    <span className="font-semibold">
+                      {pizza.quantity > 1 && `${pizza.quantity} `}
+                      {pizza.pizzaType || pizza.name}
+                    </span>
+                    {pizza.toppings && pizza.toppings.length > 0 && (
+                      <div className="text-gray-600 ml-2">
+                        {pizza.toppings.map((topping, i) => (
+                          <div key={i} className="ml-2">• {topping}</div>
+                        ))}
+                      </div>
+                    )}
+                    {pizza.specialInstructions && (
+                      <div className="text-orange-600 italic ml-2">⚠️ {pizza.specialInstructions}</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Order Special Instructions */}
+          {order.specialInstructions && (
+            <div className="mt-2 p-1.5 bg-yellow-100 border-l-2 border-yellow-500 rounded text-xs">
+              <span className="font-semibold text-yellow-800">📝 {order.specialInstructions}</span>
+            </div>
+          )}
+
+          {/* Expand indicator */}
+          <div className="text-center pt-1">
+            <svg
+              className={`w-4 h-4 mx-auto text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Expanded Actions */}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -235,133 +295,103 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.2 }}
-              className="overflow-hidden"
+              className="overflow-hidden border-t border-gray-200"
             >
-              <div className="px-4 pb-4 border-t border-gray-200">
-                {/* Pizza Checklist */}
-                <div className="mt-4 space-y-2">
-                  <h4 className="font-semibold text-gray-700 mb-2">Pizzas:</h4>
-                  {pizzas.map((pizza, index) => {
-                    const isCooked = order.cooked?.[index] || pizza.isCooked || false;
-                    const rowNumber = pizza.rowNumber || pizza.row;
-
-                    return (
-                      <div
-                        key={index}
-                        className="flex items-start gap-3 p-3 rounded hover:bg-white transition-colors border border-gray-200"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={isCooked}
-                          onChange={() => onPizzaToggle && onPizzaToggle(orderId, index, !isCooked)}
-                          className="mt-1 h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <div className={`font-semibold text-lg ${isCooked ? 'line-through text-gray-500' : 'text-gray-900'}`}>
-                              {pizza.pizzaType || pizza.name} {pizza.quantity > 1 && `(x${pizza.quantity})`}
-                            </div>
-                            {/* Prominent Row Number Badge */}
-                            {rowNumber && (
-                              <span className="inline-flex items-center justify-center px-4 py-2 text-xl font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg shadow-lg border-2 border-amber-600 min-w-[80px]">
-                                ROW {rowNumber}
-                              </span>
-                            )}
-                          </div>
-                          {pizza.toppings && pizza.toppings.length > 0 && (
-                            <div className="text-sm text-gray-600">
-                              + {pizza.toppings.join(', ')}
-                            </div>
-                          )}
-                          {pizza.specialInstructions && (
-                            <div className="text-sm text-orange-600 italic">
-                              ⚠️ {pizza.specialInstructions}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Order Special Instructions */}
-                {order.specialInstructions && (
-                  <div className="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
-                    <p className="text-sm font-semibold text-yellow-800">
-                      📝 Special Instructions:
-                    </p>
-                    <p className="text-sm text-yellow-700 mt-1">
-                      {order.specialInstructions}
-                    </p>
-                  </div>
+              <div className="p-3 space-y-2 bg-white">
+                {!allCooked && (
+                  <button
+                    onClick={() => {
+                      pizzas.forEach((_, idx) => {
+                        if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
+                          onPizzaToggle && onPizzaToggle(orderId, idx, true);
+                        }
+                      });
+                    }}
+                    className="w-full px-3 py-2 bg-blue-600 text-white rounded font-medium text-sm hover:bg-blue-700 transition-colors"
+                  >
+                    ✓ Mark All Cooked
+                  </button>
                 )}
 
-                {/* Action Buttons */}
-                <div className="mt-4 flex gap-2 flex-wrap">
-                  {!allCooked && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Mark all pizzas as cooked
-                        pizzas.forEach((_, idx) => {
-                          if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
-                            onPizzaToggle && onPizzaToggle(orderId, idx, true);
-                          }
-                        });
-                      }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
-                    >
-                      ✓ Mark All Cooked
-                    </button>
-                  )}
+                {allCooked && order.status !== 'ready' && (
+                  <button
+                    onClick={() => onStatusChange && onStatusChange(orderId, 'ready')}
+                    className="w-full px-3 py-2 bg-purple-600 text-white rounded font-medium text-sm hover:bg-purple-700 transition-colors"
+                  >
+                    🍕 Mark as Ready
+                  </button>
+                )}
 
-                  {allCooked && order.status !== 'ready' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStatusChange && onStatusChange(orderId, 'ready');
-                      }}
-                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
-                    >
-                      🍕 Mark as Ready
-                    </button>
-                  )}
-
-                  {order.status === 'ready' && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onStatusChange && onStatusChange(orderId, 'completed');
-                      }}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
-                    >
-                      ✅ Complete Order
-                    </button>
-                  )}
-                </div>
+                {order.status === 'ready' && (
+                  <button
+                    onClick={() => onStatusChange && onStatusChange(orderId, 'completed')}
+                    className="w-full px-3 py-2 bg-green-600 text-white rounded font-medium text-sm hover:bg-green-700 transition-colors"
+                  >
+                    ✅ Complete Order
+                  </button>
+                )}
               </div>
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Bottom Action Bar */}
+        <div className="border-t border-gray-200 bg-gray-900 p-2 flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (!allCooked) {
+                // Start cooking - mark all as being cooked
+                pizzas.forEach((_, idx) => {
+                  if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
+                    onPizzaToggle && onPizzaToggle(orderId, idx, true);
+                  }
+                });
+              } else if (order.status !== 'ready') {
+                // Finish cooking - mark as ready
+                onStatusChange && onStatusChange(orderId, 'ready');
+              } else {
+                // Complete order
+                onStatusChange && onStatusChange(orderId, 'completed');
+              }
+            }}
+            className="flex-1 py-2 bg-black text-white rounded font-bold text-xs uppercase hover:bg-gray-800 transition-colors"
+          >
+            {!allCooked && 'START COOKING'}
+            {allCooked && order.status !== 'ready' && 'FINISH COOKING'}
+            {order.status === 'ready' && 'COMPLETE'}
+          </button>
+
+          {/* Waste Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkAsWaste && onMarkAsWaste(order);
+            }}
+            className="px-3 py-2 bg-red-600 text-white rounded font-bold text-xs uppercase hover:bg-red-700 transition-colors"
+            title="Mark as Waste"
+          >
+            🗑️ WASTE
+          </button>
+        </div>
       </motion.div>
     );
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-xl font-bold text-gray-900">
           Kitchen Display
         </h2>
-        <div className="text-sm text-gray-600">
+        <div className="text-xs text-gray-600">
           {sortedOrders.length} active {sortedOrders.length === 1 ? 'order' : 'orders'}
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="relative mb-6">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="relative mb-4">
+        <div className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none">
+          <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
@@ -370,7 +400,7 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
           placeholder="Search by customer name, order #, or platform..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="block w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
+          className="block w-full pl-8 pr-8 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-900 placeholder-gray-500"
         />
         {searchQuery && (
           <button
@@ -384,9 +414,273 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle }) 
         )}
       </div>
 
-      <AnimatePresence>
-        {sortedOrders.map(renderOrderCard)}
-      </AnimatePresence>
+      {/* Grid or Table Layout Toggle */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 auto-rows-fr">
+          <AnimatePresence>
+            {sortedOrders.map(renderOrderCard)}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-100 border-b-2 border-gray-300">
+                <th className="p-3 text-left text-sm font-bold text-gray-700">Status</th>
+                <th className="p-3 text-left text-sm font-bold text-gray-700">Order #</th>
+                <th className="p-3 text-left text-sm font-bold text-gray-700">Customer</th>
+                <th className="p-3 text-left text-sm font-bold text-gray-700">Platform</th>
+                <th className="p-3 text-left text-sm font-bold text-gray-700">Due Time</th>
+                <th className="p-3 text-left text-sm font-bold text-gray-700">Pizzas</th>
+                <th className="p-3 text-left text-sm font-bold text-gray-700">Progress</th>
+                <th className="p-3 text-center text-sm font-bold text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <AnimatePresence>
+                {sortedOrders.map((order) => {
+                  const urgency = getUrgencyStatus(order.dueTime);
+                  const orderId = order.id || order.orderId || 'unknown';
+                  const pizzas = order.pizzas || [];
+                  const allCooked = pizzas.every((pizza, idx) => order.cooked?.[idx] || pizza.isCooked);
+                  const isVeryLate = urgency.status === 'VERY LATE';
+                  const isLate = urgency.status === 'LATE';
+                  const isAnyLate = isVeryLate || isLate;
+                  const isExpanded = expandedOrders.has(orderId);
+
+                  // Determine status badge
+                  let statusBadge = 'QUEUE';
+                  let statusBadgeClass = 'bg-gray-700 text-white';
+
+                  if (order.status === 'ready') {
+                    statusBadge = 'READY';
+                    statusBadgeClass = 'bg-purple-600 text-white';
+                  } else if (allCooked) {
+                    statusBadge = 'FINISHING';
+                    statusBadgeClass = 'bg-blue-600 text-white';
+                  } else if (pizzas.some((pizza, idx) => order.cooked?.[idx] || pizza.isCooked)) {
+                    statusBadge = 'COOKING';
+                    statusBadgeClass = 'bg-orange-600 text-white';
+                  } else if (isVeryLate) {
+                    statusBadge = 'DELAYED';
+                    statusBadgeClass = 'bg-red-600 text-white';
+                  }
+
+                  const cookedCount = pizzas.filter((pizza, idx) => order.cooked?.[idx] || pizza.isCooked).length;
+
+                  return (
+                    <React.Fragment key={orderId}>
+                      <motion.tr
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className={`border-b border-gray-200 hover:bg-gray-50 cursor-pointer ${isVeryLate ? 'bg-red-50 animate-pulse' : isLate ? 'bg-orange-50 animate-pulse' : ''}`}
+                        onClick={() => toggleOrder(orderId)}
+                      >
+                        {/* Status Badge */}
+                        <td className="p-3">
+                          <span className={`inline-block px-2 py-1 rounded text-xs font-bold uppercase ${statusBadgeClass}`}>
+                            {statusBadge}
+                          </span>
+                        </td>
+
+                        {/* Order # - smaller */}
+                        <td className="p-3 text-xs text-gray-500">
+                          #{orderId.slice(-4).toUpperCase()}
+                        </td>
+
+                        {/* Customer - BIGGER */}
+                        <td className="p-3 text-base font-bold text-gray-900">
+                          {order.customerName || 'Walk-in'}
+                        </td>
+
+                        {/* Platform */}
+                        <td className="p-3">
+                          {order.platform && (
+                            <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${getPlatformStyle(order.platform)}`}>
+                              {order.platform}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Due Time */}
+                        <td className="p-3">
+                          <div className="text-sm text-gray-700">
+                            {order.dueTime ? new Date(order.dueTime).toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                          </div>
+                          <div className={`text-xs font-semibold ${isAnyLate ? 'animate-pulse' : ''} ${urgency.textColor}`}>
+                            {formatTimeRemaining(order.dueTime)}
+                          </div>
+                        </td>
+
+                        {/* Pizzas Count */}
+                        <td className="p-3 text-sm text-gray-700">
+                          {pizzas.length} {pizzas.length === 1 ? 'pizza' : 'pizzas'}
+                        </td>
+
+                        {/* Progress */}
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                              <div
+                                className="bg-green-500 h-2 rounded-full transition-all"
+                                style={{ width: `${pizzas.length > 0 ? (cookedCount / pizzas.length) * 100 : 0}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-semibold text-gray-600">
+                              {cookedCount}/{pizzas.length}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Expand Icon */}
+                        <td className="p-3 text-center">
+                          <svg
+                            className={`w-5 h-5 mx-auto text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </td>
+                      </motion.tr>
+
+                      {/* Expanded Row Details */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.tr
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                          >
+                            <td colSpan="8" className="p-0">
+                              <div className="bg-gray-50 p-4 border-t border-gray-200">
+                                {/* Pizza Checklist */}
+                                <div className="mb-4">
+                                  <h4 className="font-semibold text-sm text-gray-700 mb-2">Pizzas:</h4>
+                                  <div className="space-y-2">
+                                    {pizzas.map((pizza, index) => {
+                                      const isCooked = order.cooked?.[index] || pizza.isCooked || false;
+
+                                      return (
+                                        <div key={index} className="flex items-start gap-3 p-2 bg-white rounded border border-gray-200">
+                                          <input
+                                            type="checkbox"
+                                            checked={isCooked}
+                                            onChange={(e) => {
+                                              e.stopPropagation();
+                                              onPizzaToggle && onPizzaToggle(orderId, index, !isCooked);
+                                            }}
+                                            className="mt-1 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                                          />
+                                          <div className="flex-1">
+                                            <div className={`font-semibold text-sm ${isCooked ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                                              {pizza.quantity > 1 && `${pizza.quantity}x `}
+                                              {pizza.pizzaType || pizza.name}
+                                              {isCooked && (
+                                                <span className="ml-2 inline-flex items-center px-2 py-0.5 text-xs font-bold bg-green-500 text-white rounded-full">
+                                                  ✓ DONE
+                                                </span>
+                                              )}
+                                            </div>
+                                            {pizza.toppings && pizza.toppings.length > 0 && (
+                                              <div className="text-xs text-gray-600 mt-1">
+                                                + {pizza.toppings.join(', ')}
+                                              </div>
+                                            )}
+                                            {pizza.specialInstructions && (
+                                              <div className="text-xs text-orange-600 italic mt-1">
+                                                ⚠️ {pizza.specialInstructions}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+
+                                {/* Order Special Instructions */}
+                                {order.specialInstructions && (
+                                  <div className="mb-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                                    <p className="text-sm font-semibold text-yellow-800">
+                                      📝 {order.specialInstructions}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Action Buttons */}
+                                <div className="flex gap-3">
+                                  {!allCooked && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        pizzas.forEach((_, idx) => {
+                                          if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
+                                            onPizzaToggle && onPizzaToggle(orderId, idx, true);
+                                          }
+                                        });
+                                      }}
+                                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                                    >
+                                      ✓ Mark All Cooked
+                                    </button>
+                                  )}
+
+                                  {allCooked && order.status !== 'ready' && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onStatusChange && onStatusChange(orderId, 'ready');
+                                      }}
+                                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium text-sm"
+                                    >
+                                      🍕 Mark as Ready
+                                    </button>
+                                  )}
+
+                                  {order.status === 'ready' && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onStatusChange && onStatusChange(orderId, 'completed');
+                                      }}
+                                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm"
+                                    >
+                                      ✅ Complete Order
+                                    </button>
+                                  )}
+
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onMarkAsWaste && onMarkAsWaste(order);
+                                    }}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
+                                  >
+                                    🗑️ Mark as Waste
+                                  </button>
+                                </div>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        )}
+                      </AnimatePresence>
+                    </React.Fragment>
+                  );
+                })}
+              </AnimatePresence>
+            </tbody>
+          </table>
+
+          {sortedOrders.length === 0 && (
+            <div className="text-center py-12 text-gray-500">
+              <p className="text-lg font-medium">No orders to display</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* No Orders Empty State */}
       {!searchQuery && sortedOrders.length === 0 && (
