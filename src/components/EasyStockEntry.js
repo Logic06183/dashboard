@@ -200,13 +200,13 @@ const EasyStockEntry = () => {
     categorizedIngredients[category].push({ name, ...data });
   });
 
-  // Sort categories - organized logically for daily stock entry
+  // Sort categories - cold drinks first so they're easy to find
   const categoryOrder = [
+    'beverage_finished', 'beverage_ingredient',
     'dough', 'sauce', 'cheese', 'meat', 'fish', 'vegetable', 'herb', 'fruit',
     'topping', 'oil', 'spread', 'paste',
     'baking', 'seasoning', 'spice', 'condiment', 'citrus',
-    'legume', 'liquid',
-    'beverage_ingredient', 'beverage_finished', 'packaging',
+    'legume', 'liquid', 'packaging',
     'other'
   ];
   const sortedCategories = Object.keys(categorizedIngredients).sort((a, b) => {
@@ -314,10 +314,10 @@ const EasyStockEntry = () => {
                     {category === 'legume' && '🫘'}
                     {category === 'liquid' && '💧'}
                     {category === 'beverage_ingredient' && '🥤'}
-                    {category === 'beverage_finished' && '🍾'}
-                    {category === 'packaging' && '🥤'}
+                    {category === 'beverage_finished' && '🥤'}
+                    {category === 'packaging' && '📦'}
                     {category === 'other' && '📦'}
-                    {' '}{category.replace(/_/g, ' ')}
+                    {' '}{category === 'beverage_finished' ? 'Cold Drinks' : category === 'beverage_ingredient' ? 'Beverage Ingredients' : category.replace(/_/g, ' ')}
                   </h2>
                 </div>
 

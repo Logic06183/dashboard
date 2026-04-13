@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
  * - Status action buttons
  */
 
-const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle, onMarkAsWaste, viewMode = 'grid' }) => {
+const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle, onMarkAllCooked, onMarkAsWaste, viewMode = 'grid' }) => {
   const [expandedOrders, setExpandedOrders] = useState(new Set());
   const [currentTime, setCurrentTime] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
@@ -301,11 +301,15 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle, on
                 {!allCooked && (
                   <button
                     onClick={() => {
-                      pizzas.forEach((_, idx) => {
-                        if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
-                          onPizzaToggle && onPizzaToggle(orderId, idx, true);
-                        }
-                      });
+                      if (onMarkAllCooked) {
+                        onMarkAllCooked(orderId);
+                      } else {
+                        pizzas.forEach((_, idx) => {
+                          if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
+                            onPizzaToggle && onPizzaToggle(orderId, idx, true);
+                          }
+                        });
+                      }
                     }}
                     className="w-full px-3 py-2 bg-blue-600 text-white rounded font-medium text-sm hover:bg-blue-700 transition-colors"
                   >
@@ -340,12 +344,16 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle, on
           <button
             onClick={() => {
               if (!allCooked) {
-                // Start cooking - mark all as being cooked
-                pizzas.forEach((_, idx) => {
-                  if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
-                    onPizzaToggle && onPizzaToggle(orderId, idx, true);
-                  }
-                });
+                // Mark all pizzas cooked in a single write (avoids race condition)
+                if (onMarkAllCooked) {
+                  onMarkAllCooked(orderId);
+                } else {
+                  pizzas.forEach((_, idx) => {
+                    if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
+                      onPizzaToggle && onPizzaToggle(orderId, idx, true);
+                    }
+                  });
+                }
               } else if (order.status !== 'ready') {
                 // Finish cooking - mark as ready
                 onStatusChange && onStatusChange(orderId, 'ready');
@@ -616,11 +624,15 @@ const ImprovedKitchenDisplay = ({ orders = [], onStatusChange, onPizzaToggle, on
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        pizzas.forEach((_, idx) => {
-                                          if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
-                                            onPizzaToggle && onPizzaToggle(orderId, idx, true);
-                                          }
-                                        });
+                                        if (onMarkAllCooked) {
+                                          onMarkAllCooked(orderId);
+                                        } else {
+                                          pizzas.forEach((_, idx) => {
+                                            if (!(order.cooked?.[idx] || pizzas[idx].isCooked)) {
+                                              onPizzaToggle && onPizzaToggle(orderId, idx, true);
+                                            }
+                                          });
+                                        }
                                       }}
                                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
                                     >

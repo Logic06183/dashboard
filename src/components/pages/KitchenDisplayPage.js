@@ -4,7 +4,7 @@ import TableKitchenDisplay from '../TableKitchenDisplay';
 import ImprovedKitchenDisplay from '../ImprovedKitchenDisplay';
 import useFirebaseOrders from '../../hooks/useFirebaseOrders';
 import useQueueCalculator from '../../hooks/useQueueCalculator';
-import { updatePizzaStatus, updateOrder } from '../../services/FirebaseService';
+import { updatePizzaStatus, markAllPizzasCooked, updateOrder } from '../../services/FirebaseService';
 
 // Wrapper component to connect ImprovedKitchenDisplay with Firebase
 const ImprovedKitchenDisplayWrapper = ({ onStatusChange, onPizzaStatusChange, onArchiveOrder }) => {
@@ -18,6 +18,14 @@ const ImprovedKitchenDisplayWrapper = ({ onStatusChange, onPizzaStatusChange, on
       }
     } catch (error) {
       console.error('Error updating pizza status:', error);
+    }
+  };
+
+  const handleMarkAllCooked = async (orderId) => {
+    try {
+      await markAllPizzasCooked(orderId);
+    } catch (error) {
+      console.error('Error marking all pizzas cooked:', error);
     }
   };
 
@@ -53,6 +61,7 @@ const ImprovedKitchenDisplayWrapper = ({ onStatusChange, onPizzaStatusChange, on
       orders={firebaseOrders}
       onStatusChange={handleStatusChange}
       onPizzaToggle={handlePizzaToggle}
+      onMarkAllCooked={handleMarkAllCooked}
     />
   );
 };

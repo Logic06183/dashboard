@@ -52,31 +52,28 @@ function getFirebaseInstance() {
   }
 }
 
-// Pizza menu from John Dough's with updated prices
+// Pizza menu — confirmed prices from John Dough's management (April 2026)
 const pizzaMenu = [
-  // Non-pizza items
-  { id: 'dough-balls', name: 'DOUGH BALLS', price: 48.00 },
-  { id: 'stretched-base', name: 'STRETCHED BASE WITH SAUCE', price: 58.00 },
-  // Pizza items - updated prices
-  { id: 'the-champ', name: 'THE CHAMP', price: 169.00 },
-  { id: 'lekkerizza', name: 'LEKKER\'IZZA', price: 195.00 },
-  { id: 'chick-tick-boom', name: 'CHICK TICK BOOM!', price: 165.00 },
-  { id: 'mish-mash', name: 'MISH-MASH', price: 159.00 },
-  { id: 'poppas', name: 'POPPA\'S', price: 179.00 },
-  { id: 'pig-in-paradise', name: 'PIG IN PARADISE', price: 169.00 },
-  { id: 'artichoke-ham', name: 'ARTICHOKE & HAM', price: 169.00 },
-  { id: 'glaze-of-glory', name: 'GLAZE OF GLORY', price: 159.00 },
-  { id: 'mediterranean', name: 'MEDITERRANEAN', price: 175.00 },
-  { id: 'margie', name: 'MARGIE', price: 125.00 },
-  { id: 'owen', name: 'OWEN!', price: 169.00 },
-  { id: 'caprese', name: 'CAPRESE', price: 165.00 },
-  { id: 'vegan-harvest', name: 'VEGAN HARVEST', price: 175.00 },
-  { id: 'veg-special', name: 'VEG SPECIAL', price: 155.00 },
-  { id: 'build-your-own', name: 'BUILD YOUR OWN', price: 139.00 },
-  { id: 'spud', name: 'SPUD', price: 139.00 },
-  { id: 'greek-goddess', name: 'GREEK GODDESS', price: 139.00 },
-  { id: 'quattro-formaggi', name: 'QUATTRO FORMAGGI', price: 169.00 },
-  { id: 'mushroom-cloud', name: 'MUSHROOM CLOUD', price: 169.00 }
+  // Non-pizza / starter items
+  { id: 'janes-dough', name: "JANE'S DOUGH", price: 89.00 },
+  { id: 'braaibroodjie', name: 'BRAAIBROODJIE PIZZA', price: 100.00 },
+  // Pizza items sorted by price
+  { id: 'owen', name: 'OWEN', price: 99.00 },
+  { id: 'margie', name: 'MARGIE', price: 119.00 },
+  { id: 'caprese', name: 'CAPRESE', price: 129.00 },
+  { id: 'spud', name: 'SPUD', price: 129.00 },
+  { id: 'chick-tick-boom', name: 'CHICK TICK BOOM', price: 149.00 },
+  { id: 'glaze-of-glory', name: 'GLAZE OF GLORY', price: 149.00 },
+  { id: 'pig-in-paradise', name: 'PIG IN PARADISE', price: 149.00 },
+  { id: 'artichoke-ham', name: 'ARTICHOKE & HAM', price: 155.00 },
+  { id: 'quattro-formaggi', name: 'QUATTRO FORMAGGI', price: 155.00 },
+  { id: 'mediterranean', name: 'MEDITERRANEAN', price: 159.00 },
+  { id: 'mushroom-cloud', name: 'MUSHROOM CLOUD', price: 159.00 },
+  { id: 'poppas', name: "POPPA'S", price: 159.00 },
+  { id: 'the-champ', name: 'THE CHAMP', price: 159.00 },
+  { id: 'vegan-harvest', name: 'VEGAN HARVEST', price: 165.00 },
+  { id: 'mish-mash', name: 'MISH-MASH', price: 169.00 },
+  { id: 'lekkerizza', name: "LEKKER'IZZA", price: 185.00 }
 ];
 
 // Cold drinks menu

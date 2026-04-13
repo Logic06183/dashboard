@@ -2,36 +2,58 @@
 import React from 'react';
 
 const PizzaMenu = ({ onOrderClick }) => {
+  // Confirmed price list from John Dough's management (April 2026)
   const menuItems = [
     // Non-pizza items
     {
-      id: 'dough-balls',
-      name: "DOUGH BALLS",
-      price: 45.00,
+      id: 'janes-dough',
+      name: "JANE'S DOUGH",
+      price: 89.00,
       description: "Six freshly baked sourdough balls, served with garlic butter.",
       ingredients: ["Sourdough", "Garlic butter"]
     },
     {
-      id: 'stretched-base',
-      name: "STRETCHED BASE WITH SAUCE",
-      price: 55.00,
-      description: "Stretched sourdough base with our signature tomato sauce.",
-      ingredients: ["Sourdough", "Tomato sauce"]
-    },
-    // Pizza items
-    {
-      id: 'the-champ',
-      name: "THE CHAMP",
-      price: 159.00,
-      description: "Pepperoni, sourdough, red onion, parmesan and victory.",
-      ingredients: ["Pepperoni", "Sourdough", "Red onion", "Parmesan"]
+      id: 'dough-balls',
+      name: "DOUGH BALLS",
+      price: 89.00,
+      description: "Six freshly baked sourdough balls, served with garlic butter.",
+      ingredients: ["Sourdough", "Garlic butter"]
     },
     {
-      id: 'lekkerizza',
-      name: "LEKKER'IZZA",
-      price: 185.00,
-      description: "Salt-cured anchovies, olives, creamy mozzarella, and aromatic basil for a timeless Italian taste.",
-      ingredients: ["Salt-cured anchovies", "Olives", "Creamy mozzarella", "Aromatic basil"]
+      id: 'braaibroodjie',
+      name: "BRAAIBROODJIE PIZZA",
+      price: 100.00,
+      description: "A South African classic reimagined as a pizza.",
+      ingredients: ["Sourdough base", "Tomato sauce", "Cheese"]
+    },
+    // Pizza items — sorted by price
+    {
+      id: 'owen',
+      name: "OWEN!",
+      price: 99.00,
+      description: "For little pizza lovers! Sauce and lots of shredded cheese on our sourdough rolled base that's good for the gut.",
+      ingredients: ["Pizza sauce", "Shredded cheese", "Sourdough base"]
+    },
+    {
+      id: 'margie',
+      name: "MARGIE",
+      price: 119.00,
+      description: "The original Neapolitan classic with fresh mozzarella and fragrant basil.",
+      ingredients: ["Fresh mozzarella", "Fragrant basil", "Tomato sauce"]
+    },
+    {
+      id: 'caprese',
+      name: "CAPRESE",
+      price: 129.00,
+      description: "Fresh mozzarella, vibrant tomatoes, balsamic glaze and basil pesto on our signature crust.",
+      ingredients: ["Fresh mozzarella", "Vibrant tomatoes", "Balsamic glaze", "Basil pesto"]
+    },
+    {
+      id: 'spud',
+      name: "SPUD",
+      price: 129.00,
+      description: "A white pizza with a heart-warming hug of crispy potatoes, caramelised onion, fragrant rosemary, a kiss of chilli oil, and a dusting of Parmesan",
+      ingredients: ["Crispy potatoes", "Caramelised onion", "Rosemary", "Chilli oil", "Parmesan"]
     },
     {
       id: 'chick-tick-boom',
@@ -41,23 +63,16 @@ const PizzaMenu = ({ onOrderClick }) => {
       ingredients: ["Spicy chicken tikka", "Sweet peppadews", "Fresh coriander"]
     },
     {
-      id: 'mish-mash',
-      name: "MISH-MASH",
-      price: 169.00,
-      description: "Parma ham, fig jam, oh damn! Finished with goat's cheese and rocket.",
-      ingredients: ["Parma ham", "Fig jam", "Goat's cheese", "Rocket"]
-    },
-    {
-      id: 'poppas',
-      name: "POPPA'S",
-      price: 159.00,
-      description: "Bacon, pepperoni, biltong, peppadews, shredded mozzarella, red onion, Mrs Ball's Chutney and feta.",
-      ingredients: ["Bacon", "Pepperoni", "Biltong", "Peppadews", "Shredded mozzarella", "Red onion", "Mrs Ball's Chutney", "Feta"]
+      id: 'glaze-of-glory',
+      name: "GLAZE OF GLORY",
+      price: 149.00,
+      description: "Balsamic glaze drizzled over bacon, feta and red onion. You stay classy, Joburg.",
+      ingredients: ["Bacon", "Feta", "Red onion", "Balsamic glaze"]
     },
     {
       id: 'pig-in-paradise',
       name: "PIG IN PARADISE",
-      price: 159.00,
+      price: 149.00,
       description: "Sourdough piled high with cheese, bacon, and caramelised pineapple. We're not saying it's a Hawaiian pizza, but...",
       ingredients: ["Cheese", "Bacon", "Caramelised pineapple", "Sourdough base"]
     },
@@ -69,11 +84,11 @@ const PizzaMenu = ({ onOrderClick }) => {
       ingredients: ["Shredded mozzarella", "Ham", "Mushrooms", "Artichoke", "Olives"]
     },
     {
-      id: 'glaze-of-glory',
-      name: "GLAZE OF GLORY",
-      price: 149.00,
-      description: "Balsamic glaze drizzled over bacon, feta and red onion. You stay classy, Joburg.",
-      ingredients: ["Bacon", "Feta", "Red onion", "Balsamic glaze"]
+      id: 'quattro-formaggi',
+      name: "QUATTRO FORMAGGI",
+      price: 155.00,
+      description: "A four-cheese feast of shredded mozzarella, provolone, blue cheese, and Parmesan, plus red onion and fig jam. Great pizza, questionable date choice.",
+      ingredients: ["Shredded mozzarella", "Provolone", "Blue cheese", "Parmesan", "Red onion", "Fig jam"]
     },
     {
       id: 'mediterranean',
@@ -83,25 +98,25 @@ const PizzaMenu = ({ onOrderClick }) => {
       ingredients: ["Mushrooms", "Zucchini", "Olives", "Sun-dried tomatoes", "Herbs", "Hummus", "Olive oil"]
     },
     {
-      id: 'margie',
-      name: "MARGIE",
-      price: 119.00,
-      description: "The original Neapolitan classic with fresh mozzarella and fragrant basil.",
-      ingredients: ["Fresh mozzarella", "Fragrant basil", "Tomato sauce"]
+      id: 'mushroom-cloud',
+      name: "MUSHROOM CLOUD",
+      price: 159.00,
+      description: "Farm-fresh mushrooms, caramelised onions, goat cheese, Banhoek chilli oil and a sprinkle of sunflower seeds.",
+      ingredients: ["Farm-fresh mushrooms", "Caramelised onions", "Goat cheese", "Banhoek chilli oil", "Sunflower seeds"]
     },
     {
-      id: 'owen',
-      name: "OWEN!",
-      price: 99.00,
-      description: "For little pizza lovers! Sauce and lots of shredded cheese on our sourdough rolled base that's good for the gut.",
-      ingredients: ["Pizza sauce", "Shredded cheese", "Sourdough base"]
+      id: 'poppas',
+      name: "POPPA'S",
+      price: 159.00,
+      description: "Bacon, pepperoni, biltong, peppadews, shredded mozzarella, red onion, Mrs Ball's Chutney and feta.",
+      ingredients: ["Bacon", "Pepperoni", "Biltong", "Peppadews", "Shredded mozzarella", "Red onion", "Mrs Ball's Chutney", "Feta"]
     },
     {
-      id: 'caprese',
-      name: "CAPRESE",
-      price: 129.00,
-      description: "Fresh mozzarella, vibrant tomatoes, balsamic glaze and basil pesto on our signature crust.",
-      ingredients: ["Fresh mozzarella", "Vibrant tomatoes", "Balsamic glaze", "Basil pesto"]
+      id: 'the-champ',
+      name: "THE CHAMP",
+      price: 159.00,
+      description: "Pepperoni, sourdough, red onion, parmesan and victory.",
+      ingredients: ["Pepperoni", "Sourdough", "Red onion", "Parmesan"]
     },
     {
       id: 'vegan-harvest',
@@ -111,46 +126,18 @@ const PizzaMenu = ({ onOrderClick }) => {
       ingredients: ["Mushrooms", "Zucchini", "Olives", "Sun-dried tomatoes", "Herbs", "Hummus", "Olive oil"]
     },
     {
-      id: 'veg-special',
-      name: "VEG SPECIAL",
-      price: 145.00,
-      description: "Fresh mushrooms, bell peppers, olives, cherry tomatoes, and caramelized onions with extra mozzarella.",
-      ingredients: ["Mushrooms", "Bell peppers", "Olives", "Cherry tomatoes", "Caramelized onions", "Mozzarella"]
+      id: 'mish-mash',
+      name: "MISH-MASH",
+      price: 169.00,
+      description: "Parma ham, fig jam, oh damn! Finished with goat's cheese and rocket.",
+      ingredients: ["Parma ham", "Fig jam", "Goat's cheese", "Rocket"]
     },
     {
-      id: 'build-your-own',
-      name: "BUILD YOUR OWN",
-      price: 130.00,
-      description: "Start with a base and add your favorite toppings (additional charges per topping).",
-      ingredients: ["Sourdough", "Tomato sauce", "Mozzarella"]
-    },
-    {
-      id: 'spud',
-      name: "SPUD",
-      price: 129.00,
-      description: "A white pizza with a heart-warming hug of crispy potatoes, caramelised onion, fragrant rosemary, a kiss of chilli oil, and a dusting of Parmesan",
-      ingredients: ["Crispy potatoes", "Caramelised onion", "Rosemary", "Chilli oil", "Parmesan"]
-    },
-    {
-      id: 'greek-goddess',
-      name: "GREEK GODDESS",
-      price: 129.00,
-      description: "Zucchini, sun-dried tomatoes, olives, feta, garlic, and shredded mozzarella. By Hera, this is a pizza fit for Olympus!",
-      ingredients: ["Zucchini", "Sun-dried tomatoes", "Olives", "Feta", "Garlic", "Shredded mozzarella"]
-    },
-    {
-      id: 'quattro-formaggi',
-      name: "QUATTRO FORMAGGI",
-      price: 155.00,
-      description: "A four-cheese feast of shredded mozzarella, provolone, blue cheese, and Parmesan, plus red onion and fig jam. Great pizza, questionable date choice.",
-      ingredients: ["Shredded mozzarella", "Provolone", "Blue cheese", "Parmesan", "Red onion", "Fig jam"]
-    },
-    {
-      id: 'mushroom-cloud',
-      name: "MUSHROOM CLOUD",
-      price: 159.00,
-      description: "Farm-fresh mushrooms, caramelised onions, goat cheese, Banhoek chilli oil and a sprinkle of sunflower seeds.",
-      ingredients: ["Farm-fresh mushrooms", "Caramelised onions", "Goat cheese", "Banhoek chilli oil", "Sunflower seeds"]
+      id: 'lekkerizza',
+      name: "LEKKER'IZZA",
+      price: 185.00,
+      description: "Bacon, pepperoni, biltong, peppadews, feta, red onion, chutney — the works.",
+      ingredients: ["Bacon", "Pepperoni", "Biltong", "Peppadews", "Feta", "Red onion", "Chutney"]
     }
   ];
 

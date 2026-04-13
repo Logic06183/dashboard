@@ -115,27 +115,26 @@ const CustomOrderForm = ({ onSubmit, setShowOrderForm }) => {
   // Platform/delivery service options
   const platformOptions = ['Window', 'Uber Eats', 'Mr D Food', 'Bolt Food', 'Customer Pickup', 'Staff', 'Other'];
 
-  // Pizza prices (in Rands)
+  // Pizza prices — confirmed by management (April 2026)
   const pizzaPrices = {
+    "Jane's Dough": 89,
+    'Braaibroodjie Pizza': 100,
+    'Owen': 99,
     'Margie': 119,
-    'Champ': 159,
-    'Pig n Paradise': 149,
+    'Caprese': 129,
+    'Spud': 129,
+    'Chick Tick Boom': 149,
+    'Glaze of Glory': 149,
+    'Pig in Paradise': 149,
+    'Artichoke & Ham': 155,
+    'Quattro Formaggi': 155,
+    'Mediterranean': 159,
+    'Mushroom Cloud': 159,
+    "Poppa's": 159,
+    'The Champ': 159,
     'Vegan Harvest': 165,
     'Mish-Mash': 169,
-    'Mushroom Cloud': 159,
-    'Feisty Italian': 159,
-    'Sausage Party': 159,
-    'Zesty Zucchini': 149,
-    'Spud': 129,
-    'Owen': 99,
-    'Build Your Own': 130,
-    'Lekker\'izza Pizza': 185,
-    'Poppa\'s Pizza': 159,
-    'Sunshine Margherita': 119,
-    'Chick Tick Boom': 149,
-    'Ham & Artichoke': 155,
-    'Veg Special': 149,
-    'Jane\'s Dough': 109
+    "Lekker'izza": 185
   };
 
   // Handle pizza quantity change

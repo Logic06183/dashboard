@@ -255,6 +255,47 @@ export const updatePizzaStatus = async (orderId, pizzaIndex, isCooked) => {
 };
 
 /**
+ * Mark ALL pizzas in an order as cooked in a single Firestore write.
+ * Use this instead of calling updatePizzaStatus in a loop — parallel calls
+ * race against each other and only the last write survives.
+ * @param {string} orderId - The order ID
+ * @returns {Promise<Object>} The updated order
+ */
+export const markAllPizzasCooked = async (orderId) => {
+  try {
+    log(`Marking all pizzas cooked in order ${orderId}`);
+
+    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+    const orderSnap = await getDoc(orderRef);
+
+    if (!orderSnap.exists()) {
+      throw new Error(`Order ${orderId} not found`);
+    }
+
+    const orderData = orderSnap.data();
+    const pizzas = [...(orderData.pizzas || [])];
+
+    // Mark every pizza as cooked in one pass
+    const cookedPizzas = pizzas.map(pizza => ({ ...pizza, isCooked: true }));
+    const cookedStatus = pizzas.map(() => true);
+
+    await updateDoc(orderRef, {
+      pizzas: cookedPizzas,
+      cooked: cookedStatus,
+      status: 'ready',
+      updatedAt: new Date().toISOString()
+    });
+
+    log(`All ${pizzas.length} pizzas marked cooked in order ${orderId}`);
+
+    return { id: orderId, ...orderData, pizzas: cookedPizzas, cooked: cookedStatus, status: 'ready' };
+  } catch (error) {
+    errorLog('Error marking all pizzas cooked:', error);
+    throw error;
+  }
+};
+
+/**
  * Delete an order from Firestore
  * @param {string} orderId - The order ID to delete
  * @returns {Promise<boolean>} Whether the deletion was successful
@@ -924,6 +965,7 @@ const FirebaseService = {
   getOrderById,
   updateOrder,
   updatePizzaStatus,
+  markAllPizzasCooked,
   deleteOrder,
   archiveOrder,
   getArchivedOrders,
