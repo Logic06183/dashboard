@@ -9,6 +9,7 @@
  * where they appear in the dashboard immediately.
  */
 
+const { onRequest } = require('firebase-functions/v2/https');
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const config = require('./config');
@@ -32,7 +33,7 @@ const database = admin.database();
  * - Order is updated
  * - Order is cancelled
  */
-exports.receiveUberEatsOrder = functions.https.onRequest(async (req, res) => {
+exports.receiveUberEatsOrder = onRequest(async (req, res) => {
   // Check if Uber Eats integration is enabled
   if (!config.uberEats.enabled) {
     console.log('Uber Eats integration is disabled in config');
@@ -134,7 +135,7 @@ exports.receiveUberEatsOrder = functions.https.onRequest(async (req, res) => {
  *
  * URL: https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/receiveMrDFoodOrder
  */
-exports.receiveMrDFoodOrder = functions.https.onRequest(async (req, res) => {
+exports.receiveMrDFoodOrder = onRequest(async (req, res) => {
   // Check if Mr. D integration is enabled
   if (!config.mrDFood.enabled) {
     console.log('Mr. D Food integration is disabled in config');
@@ -247,7 +248,7 @@ async function logPlatformRequest(platform, data) {
  * Simple health check to verify functions are deployed
  * URL: https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/healthCheck
  */
-exports.healthCheck = functions.https.onRequest((req, res) => {
+exports.healthCheck = onRequest((req, res) => {
   res.status(200).json({
     status: 'ok',
     message: 'John Dough\'s delivery integration is running',

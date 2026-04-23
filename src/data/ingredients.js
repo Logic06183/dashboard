@@ -59,6 +59,7 @@ export const PIZZA_INGREDIENTS = {
     },
     'SPUD': {
       ingredients: {
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
         'potato_slices': { unit: 'g', amount: 100, category: 'vegetable', cost: 0.08 },
         'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
         'caramelised_onions': { unit: 'g', amount: 76, category: 'vegetable', cost: 0.08 },
@@ -136,7 +137,7 @@ export const PIZZA_INGREDIENTS = {
         'bacon': { unit: 'g', amount: 64, category: 'meat', cost: 0.14 },
         'red_onion': { unit: 'g', amount: 8, category: 'vegetable', cost: 0.04 },
         'feta': { unit: 'g', amount: 32, category: 'cheese', cost: 0.18 },
-        'balsamic_glaze': { unit: 'ml', amount: 10, category: 'sauce', cost: 0.15 }
+        'balsamic_glaze': { unit: 'ml', amount: 10, category: 'sauce', cost: 0.224 }
       }
     },
     'MEDITERRANEAN': {
@@ -152,6 +153,7 @@ export const PIZZA_INGREDIENTS = {
     },
     'QUATTRO FORMAGGI': {
       ingredients: {
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
         'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
         'provolone': { unit: 'g', amount: 64, category: 'cheese', cost: 0.20 },
         'fig_preserve': { unit: 'g', amount: 45, category: 'spread', cost: 0.20 },
@@ -167,7 +169,7 @@ export const PIZZA_INGREDIENTS = {
         'baby_tomatoes': { unit: 'g', amount: 100, category: 'vegetable', cost: 0.10 },
         'fresh_mozzarella': { unit: 'g', amount: 80, category: 'cheese', cost: 0.15 },
         'basil_pesto': { unit: 'g', amount: 6, category: 'sauce', cost: 0.22 },
-        'balsamic_glaze': { unit: 'ml', amount: 10, category: 'sauce', cost: 0.15 },
+        'balsamic_glaze': { unit: 'ml', amount: 10, category: 'sauce', cost: 0.224 },
         'basil': { unit: 'g', amount: 3.5, category: 'herb', cost: 0.20 }
       }
     },
@@ -175,6 +177,27 @@ export const PIZZA_INGREDIENTS = {
       ingredients: {
         'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
         'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 }
+      }
+    },
+    // Jane's Dough - confirmed by Ngunez: base, olives, herbs, garlic, garnish with rocket
+    'JANE\'S DOUGH': {
+      ingredients: {
+        'olive_oil': { unit: 'ml', amount: 5, category: 'oil', cost: 0.15 },
+        'kalamata_olives': { unit: 'g', amount: 50, category: 'vegetable', cost: 0.10 },
+        'basil': { unit: 'g', amount: 3.5, category: 'herb', cost: 0.20 },
+        'rosemary': { unit: 'g', amount: 2, category: 'herb', cost: 0.10 },
+        'garlic': { unit: 'g', amount: 3, category: 'vegetable', cost: 0.05 },
+        'rocket': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.12 }
+      }
+    },
+    // Braaibroodjie Pizza - confirmed by Ngunez: base, sauce, mozzarella, chutney, red onion, baby tomatoes
+    'BRAAIBROODJIE PIZZA': {
+      ingredients: {
+        'pizza_sauce': { unit: 'ml', amount: 60, category: 'sauce', cost: 0.05 },
+        'shredded_mozzarella': { unit: 'g', amount: 94, category: 'cheese', cost: 0.12 },
+        'chutney': { unit: 'g', amount: 20, category: 'sauce', cost: 0.10 },
+        'red_onion': { unit: 'g', amount: 20, category: 'vegetable', cost: 0.04 },
+        'baby_tomatoes': { unit: 'g', amount: 60, category: 'vegetable', cost: 0.10 }
       }
     },
     'BUILD YOUR OWN': {
@@ -229,56 +252,68 @@ export const PIZZA_INGREDIENTS = {
     }
   },
   
-  // Cold drinks - simplified to track actual purchased beverages only
+  // Cold drinks — prices confirmed by Ngunez (Illovo), April 2026
   coldDrinks: {
-    'Coca-Cola 330ml': {
+    // Soft Drinks & Water — R20
+    'Coke 330ml': {
       ingredients: {
-        'coca_cola_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
+        'coke_330ml': { unit: 'can', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
     'Coke Zero 330ml': {
       ingredients: {
-        'coke_zero_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
+        'coke_zero_330ml': { unit: 'can', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
     'Sprite 330ml': {
       ingredients: {
-        'sprite_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
+        'sprite_330ml': { unit: 'can', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
-    'Fanta Orange 330ml': {
+    'Sprite Zero 330ml': {
       ingredients: {
-        'fanta_orange_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 15.00 }
+        'sprite_zero_330ml': { unit: 'can', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
-    'Appletizer 330ml': {
+    'Ice Tea Peach 500ml': {
       ingredients: {
-        'appletizer_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 18.50 }
+        'ice_tea_peach_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
-    'Grapetizer 330ml': {
+    'Ice Tea Lemon 500ml': {
       ingredients: {
-        'grapetizer_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 18.50 }
-      }
-    },
-    'Still Water 500ml': {
-      ingredients: {
-        'still_water_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 12.00 }
+        'ice_tea_lemon_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
     'Sparkling Water 500ml': {
       ingredients: {
-        'sparkling_water_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 14.00 }
+        'sparkling_water_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
-    'Ice Tea 500ml': {
+    'Still Water 500ml': {
       ingredients: {
-        'ice_tea_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 16.00 }
+        'still_water_500ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 20.00 }
       }
     },
-    'Red Bull 250ml': {
+    // Premium Beverages — R35
+    'Grapetiser 330ml': {
       ingredients: {
-        'red_bull_250ml': { unit: 'can', amount: 1, category: 'beverage_finished', cost: 25.00 }
+        'grapetiser_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 35.00 }
+      }
+    },
+    'Appletiser 330ml': {
+      ingredients: {
+        'appletiser_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 35.00 }
+      }
+    },
+    'Savanna Zero 330ml': {
+      ingredients: {
+        'savanna_zero_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 35.00 }
+      }
+    },
+    'Heineken Zero 330ml': {
+      ingredients: {
+        'heineken_zero_330ml': { unit: 'bottle', amount: 1, category: 'beverage_finished', cost: 35.00 }
       }
     }
   },
@@ -308,6 +343,10 @@ export const PIZZA_INGREDIENTS = {
     'Mediterranean': 'MEDITERRANEAN',
     'Quattro Formaggi': 'QUATTRO FORMAGGI',
     'Caprese': 'CAPRESE',
-    'Owen': 'OWEN'
+    'Owen': 'OWEN',
+    'Jane\'s Dough': 'JANE\'S DOUGH',
+    'Janes Dough': 'JANE\'S DOUGH',
+    'Braaibroodjie Pizza': 'BRAAIBROODJIE PIZZA',
+    'Braaibroodjie': 'BRAAIBROODJIE PIZZA'
   }
 };

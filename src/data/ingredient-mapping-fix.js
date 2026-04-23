@@ -3,53 +3,12 @@
  * This creates a standardized mapping between recipe ingredients and inventory items
  */
 
-export const INGREDIENT_MAPPING = {
-  // Pizza ingredient mappings - from recipe names to inventory names
-  'shredded_mozzarella': 'mozzarella',
-  'fresh_mozzarella': 'mozzarella', // Both types use same inventory item
-  'red_onion': 'onions',
-  'caramelised_pineapple': 'pineapple',
-  'roasted_garlic': 'garlic',
-  'caramelized_onion': 'onions',
-  'bell_pepper': 'bell_peppers',
-  'pizza_sauce': 'tomato_sauce', // If using different names
-  'sourdough_dough': 'dough_balls',
-  
-  // Meat mappings
-  'bacon': 'bacon',
-  'pepperoni': 'pepperoni', 
-  'ham': 'ham',
-  'boerewors': 'boerewors',
-  'beef_strips': 'beef',
-  'chicken_strips': 'chicken',
-  
-  // Vegetable mappings
-  'mushrooms': 'mushrooms',
-  'cherry_tomatoes': 'tomatoes',
-  'sun_dried_tomatoes': 'sundried_tomatoes',
-  'olives': 'olives',
-  'avocado': 'avocado',
-  'jalapenos': 'jalapenos',
-  'potatoes': 'potatoes',
-  
-  // Herb and spice mappings
-  'basil': 'basil',
-  'oregano': 'oregano',
-  'rosemary': 'rosemary',
-  'thyme': 'thyme',
-  'garlic_butter': 'garlic_butter',
-  
-  // Cheese mappings
-  'parmesan': 'parmesan',
-  'feta': 'feta',
-  'ricotta': 'ricotta',
-  
-  // Cold drink mappings
-  'coke_syrup': 'coke_syrup',
-  'sprite_syrup': 'sprite_syrup',
-  'fanta_syrup': 'fanta_syrup',
-  'carbonated_water': 'carbonated_water'
-};
+// IMPORTANT: Recipe ingredient names must match inventory key names exactly.
+// EasyStockEntry saves stock under the raw recipe name, and InventoryDeductionService
+// deducts using the mapped name. If these differ, deductions silently fail.
+// Only add a mapping here if an ingredient is genuinely stored under a DIFFERENT key
+// in Firebase than it is named in the recipe (e.g. a legacy rename).
+export const INGREDIENT_MAPPING = {};
 
 /**
  * Maps a recipe ingredient name to the corresponding inventory item name

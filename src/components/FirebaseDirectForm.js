@@ -76,18 +76,67 @@ const pizzaMenu = [
   { id: 'lekkerizza', name: "LEKKER'IZZA", price: 185.00 }
 ];
 
-// Cold drinks menu
+// Toppings/extras menu — prices confirmed April 2026
+const toppingsMenu = [
+  // Bases (chargeable add-ons)
+  { id: 'dough-ball', name: 'Dough Ball', price: 30.00 },
+  { id: 'base-with-sauce', name: 'Base with Sauce', price: 65.00 },
+  // Proteins
+  { id: 'anchovies', name: 'Anchovies', price: 20.00 },
+  { id: 'bacon', name: 'Bacon', price: 25.00 },
+  { id: 'biltong', name: 'Biltong', price: 27.00 },
+  { id: 'chicken', name: 'Chicken', price: 29.00 },
+  { id: 'chorizo', name: 'Chorizo', price: 20.00 },
+  { id: 'ham', name: 'Ham', price: 29.00 },
+  { id: 'parma-ham', name: 'Parma Ham', price: 25.00 },
+  { id: 'pepperoni', name: 'Pepperoni', price: 25.00 },
+  // Cheese
+  { id: 'blue-cheese', name: 'Blue Cheese', price: 25.00 },
+  { id: 'feta', name: 'Feta', price: 24.50 },
+  { id: 'fresh-mozzarella', name: 'Fresh Mozzarella', price: 25.00 },
+  { id: 'goats-cheese', name: "Goat's Cheese", price: 25.00 },
+  { id: 'parmesan', name: 'Parmesan', price: 10.00 },
+  { id: 'provolone', name: 'Provolone', price: 28.00 },
+  { id: 'shredded-cheese', name: 'Shredded Cheese', price: 25.00 },
+  // Vegetables
+  { id: 'artichokes', name: 'Artichokes', price: 23.00 },
+  { id: 'caramelised-onion', name: 'Caramelised Onion', price: 10.00 },
+  { id: 'crispy-potatoes', name: 'Crispy Potatoes', price: 32.00 },
+  { id: 'mushroom', name: 'Mushroom', price: 20.00 },
+  { id: 'olives', name: 'Olives', price: 15.00 },
+  { id: 'peppadew', name: 'Peppadew', price: 20.00 },
+  { id: 'pineapple', name: 'Pineapple', price: 20.00 },
+  { id: 'red-onion', name: 'Red Onion', price: 14.00 },
+  { id: 'sundried-tomato', name: 'Sundried Tomato', price: 20.00 },
+  { id: 'zucchini', name: 'Zucchini', price: 10.00 },
+  // Sauces & spreads
+  { id: 'balsamic-glaze', name: 'Balsamic Glaze', price: 15.00 },
+  { id: 'capers', name: 'Capers', price: 15.00 },
+  { id: 'chilli-oil-bottle', name: 'Chilli Oil Bottle', price: 140.00 },
+  { id: 'chutney', name: 'Chutney', price: 16.00 },
+  { id: 'fig-preserve', name: 'Fig Preserve', price: 15.00 },
+  { id: 'hummus', name: 'Hummus', price: 15.00 },
+  { id: 'pesto', name: 'Pesto', price: 15.00 },
+  { id: 'sauce', name: 'Sauce', price: 15.00 },
+];
+
+// Cold drinks menu — prices confirmed by Ngunez (Illovo), April 2026
+// NOTE: 'name' must match keys in PIZZA_INGREDIENTS.coldDrinks in ingredients.js
 const coldDrinksMenu = [
-  { id: 'coke', name: 'Coca-Cola 330ml', price: 25.00 },
-  { id: 'coke-zero', name: 'Coke Zero 330ml', price: 25.00 },
-  { id: 'sprite', name: 'Sprite 330ml', price: 25.00 },
-  { id: 'fanta-orange', name: 'Fanta Orange 330ml', price: 25.00 },
-  { id: 'appletizer', name: 'Appletizer 330ml', price: 28.00 },
-  { id: 'grapetizer', name: 'Grapetizer 330ml', price: 28.00 },
-  { id: 'water-still', name: 'Still Water 500ml', price: 18.00 },
+  // Soft Drinks & Water — R20
+  { id: 'coke', name: 'Coke 330ml', price: 20.00 },
+  { id: 'coke-zero', name: 'Coke Zero 330ml', price: 20.00 },
+  { id: 'sprite', name: 'Sprite 330ml', price: 20.00 },
+  { id: 'sprite-zero', name: 'Sprite Zero 330ml', price: 20.00 },
+  { id: 'ice-tea-peach', name: 'Ice Tea Peach 500ml', price: 20.00 },
+  { id: 'ice-tea-lemon', name: 'Ice Tea Lemon 500ml', price: 20.00 },
   { id: 'water-sparkling', name: 'Sparkling Water 500ml', price: 20.00 },
-  { id: 'ice-tea', name: 'Ice Tea 500ml', price: 28.00 },
-  { id: 'red-bull', name: 'Red Bull 250ml', price: 35.00 }
+  { id: 'water-still', name: 'Still Water 500ml', price: 20.00 },
+  // Premium Beverages — R35
+  { id: 'grapetiser', name: 'Grapetiser 330ml', price: 35.00 },
+  { id: 'appletiser', name: 'Appletiser 330ml', price: 35.00 },
+  { id: 'savanna-zero', name: 'Savanna Zero 330ml', price: 35.00 },
+  { id: 'heineken-zero', name: 'Heineken Zero 330ml', price: 35.00 }
 ];
 
 // This form is simplified and uses a direct Firebase approach
@@ -96,7 +145,8 @@ const FirebaseDirectForm = ({ onClose }) => {
   const { calculateEstimatedPrepTime, formatTimeEstimate, totalPizzasInQueue, queueData } = useQueueCalculator();
   const [orderData, setOrderData] = useState({
     platform: 'Window',
-    prepTimeMinutes: 15
+    prepTimeMinutes: 15,
+    specialInstructions: ''
   });
   
   // Customer selection state
@@ -112,6 +162,8 @@ const FirebaseDirectForm = ({ onClose }) => {
   
   // State for managing cold drinks
   const [coldDrinks, setColdDrinks] = useState([]);
+  // State for managing toppings/extras
+  const [toppings, setToppings] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState({ status: 'idle', message: '' });
   const [db, setDb] = useState(null);
@@ -346,10 +398,39 @@ const FirebaseDirectForm = ({ onClose }) => {
     });
   };
   
+  // Add a topping/extra to the order
+  const addTopping = () => {
+    setToppings(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        toppingType: toppingsMenu[0].name,
+        quantity: 1
+      }
+    ]);
+  };
+
+  // Remove a topping from the order
+  const removeTopping = (toppingId) => {
+    setToppings(prev => prev.filter(item => item.id !== toppingId));
+  };
+
+  // Handle changes to a topping item
+  const handleToppingChange = (e, toppingId) => {
+    const { name, value } = e.target;
+    setToppings(prevItems =>
+      prevItems.map(item =>
+        item.id === toppingId
+          ? { ...item, [name]: name === 'quantity' ? parseInt(value, 10) : value }
+          : item
+      )
+    );
+  };
+
   // Remove a pizza from the order
   const removePizzaItem = (pizzaId) => {
-    // Allow removing pizzas if there are cold drinks, otherwise require at least one pizza
-    if (pizzaItems.length > 1 || coldDrinks.length > 0) {
+    // Allow removing pizzas if there are cold drinks or toppings, otherwise require at least one pizza
+    if (pizzaItems.length > 1 || coldDrinks.length > 0 || toppings.length > 0) {
       setPizzaItems(prev => prev.filter(item => item.id !== pizzaId));
     }
   };
@@ -360,13 +441,18 @@ const FirebaseDirectForm = ({ onClose }) => {
       const pizza = pizzaMenu.find(p => p.name === item.pizzaType) || { price: 159 };
       return total + (pizza.price * item.quantity);
     }, 0);
-    
+
     const drinksTotal = coldDrinks.reduce((total, item) => {
       const drink = coldDrinksMenu.find(d => d.name === item.drinkType) || { price: 25 };
       return total + (drink.price * item.quantity);
     }, 0);
-    
-    return pizzaTotal + drinksTotal;
+
+    const toppingsTotal = toppings.reduce((total, item) => {
+      const topping = toppingsMenu.find(t => t.name === item.toppingType) || { price: 0 };
+      return total + (topping.price * item.quantity);
+    }, 0);
+
+    return pizzaTotal + drinksTotal + toppingsTotal;
   };
   
   // Check if any pizza has special instructions
@@ -378,11 +464,11 @@ const FirebaseDirectForm = ({ onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate that there's at least one item (pizza or drink)
-    if (pizzaItems.length === 0 && coldDrinks.length === 0) {
-      setResult({ 
-        status: 'error', 
-        message: 'Please add at least one pizza or cold drink to the order'
+    // Validate that there's at least one item (pizza, drink, or topping)
+    if (pizzaItems.length === 0 && coldDrinks.length === 0 && toppings.length === 0) {
+      setResult({
+        status: 'error',
+        message: 'Please add at least one pizza, cold drink, or topping to the order'
       });
       return;
     }
@@ -436,6 +522,16 @@ const FirebaseDirectForm = ({ onClose }) => {
           totalPrice: drink.price * item.quantity
         };
       });
+
+      // Process toppings/extras
+      const processedToppings = toppings.map(item => {
+        const topping = toppingsMenu.find(t => t.name === item.toppingType) || { price: 0 };
+        return {
+          toppingType: item.toppingType,
+          quantity: item.quantity,
+          totalPrice: topping.price * item.quantity
+        };
+      });
       
       // Calculate total price
       const totalPrice = calculateTotalPrice();
@@ -472,18 +568,18 @@ const FirebaseDirectForm = ({ onClose }) => {
         phone: customer.phone || '',
         pizzas: processedPizzaItems,
         coldDrinks: processedColdDrinks,
+        toppings: processedToppings,
         platform: orderData.platform,
         status: 'pending',
         orderTime: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         prepTimeMinutes: orderData.prepTimeMinutes || 15,
-        // Calculate due time based on current time + prep time minutes
         dueTime: new Date(Date.now() + (orderData.prepTimeMinutes * 60 * 1000)).toISOString(),
         totalAmount: totalPrice,
-        // Add fields to track cooking status
         cooked: cookedStatuses,
-        hasSpecialInstructions: hasSpecialInstructions(),
+        specialInstructions: orderData.specialInstructions || '',
+        hasSpecialInstructions: hasSpecialInstructions() || !!(orderData.specialInstructions && orderData.specialInstructions.trim()),
         // Add debugging fields
         source: 'FirebaseDirectForm',
         timestamp: Date.now()
@@ -543,16 +639,18 @@ const FirebaseDirectForm = ({ onClose }) => {
       // Reset form after successful submission
       setOrderData({
         platform: 'Window',
-        prepTimeMinutes: 15
+        prepTimeMinutes: 15,
+        specialInstructions: ''
       });
       setSelectedCustomer(null);
       setSimpleCustomerName(''); // Clear simple customer name
       setCustomerSuggestions([]); // Clear suggestions
       setShowSuggestions(false);
       
-      // Reset to empty arrays - allow cold drinks only orders
+      // Reset to empty arrays
       setPizzaItems([]);
       setColdDrinks([]);
+      setToppings([]);
     } catch (error) {
       console.error('Error submitting order:', error);
       console.error('Error details:', {
@@ -770,7 +868,21 @@ const FirebaseDirectForm = ({ onClose }) => {
               </div>
             </div>
           </div>
-          
+
+          <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-3">
+            <label className="block text-sm font-semibold text-yellow-800 mb-1">
+              📝 Order Instructions (optional)
+            </label>
+            <textarea
+              name="specialInstructions"
+              value={orderData.specialInstructions}
+              onChange={handleOrderDataChange}
+              placeholder="e.g. Allergy info, call when ready, leave at door, no onions on pizza 2..."
+              className="w-full p-2 border border-yellow-300 rounded h-16 text-sm bg-white focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500"
+            />
+            <p className="text-xs text-yellow-700 mt-1">These notes appear on the kitchen display for all staff to see.</p>
+          </div>
+
           <div className="border-t pt-4">
             <h3 className="font-medium text-gray-800 mb-2">Pizza Items</h3>
             
@@ -929,7 +1041,71 @@ const FirebaseDirectForm = ({ onClose }) => {
               + Add Cold Drink
             </button>
           </div>
-          
+
+          <div className="border-t pt-4">
+            <h3 className="font-medium text-gray-800 mb-2">Toppings / Extras</h3>
+
+            {toppings.map((topping, index) => (
+              <div key={topping.id} className="bg-green-50 p-3 rounded-lg mb-3 border border-green-200">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-medium text-green-800">Extra #{index + 1}</h4>
+                  <button
+                    type="button"
+                    onClick={() => removeTopping(topping.id)}
+                    className="text-red-500 hover:text-red-700 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Topping / Extra
+                    </label>
+                    <select
+                      name="toppingType"
+                      value={topping.toppingType}
+                      onChange={(e) => handleToppingChange(e, topping.id)}
+                      className="w-full p-2 border border-gray-300 rounded"
+                      required
+                    >
+                      {toppingsMenu.map(t => (
+                        <option key={`${topping.id}-${t.id}`} value={t.name}>
+                          {t.name} (R{t.price.toFixed(2)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      name="quantity"
+                      value={topping.quantity}
+                      onChange={(e) => handleToppingChange(e, topping.id)}
+                      min="1"
+                      max="10"
+                      className="w-full p-2 border border-gray-300 rounded"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={addTopping}
+              className="mt-2 w-full py-2 px-4 border border-dashed border-green-400 text-green-600 rounded hover:bg-green-50"
+            >
+              + Add Topping / Extra
+            </button>
+          </div>
+
           <div className="bg-gray-50 p-3 rounded-lg border">
             <h3 className="font-medium text-gray-800 mb-1">Order Summary</h3>
             <div className="text-sm text-gray-600 mb-2">
@@ -943,7 +1119,12 @@ const FirebaseDirectForm = ({ onClose }) => {
                   {coldDrinks.reduce((total, item) => total + item.quantity, 0)} drink(s), {coldDrinks.length} different type(s)
                 </span>
               )}
-              {pizzaItems.length === 0 && coldDrinks.length === 0 && (
+              {toppings.length > 0 && (
+                <span className="block">
+                  {toppings.reduce((total, item) => total + item.quantity, 0)} extra(s), {toppings.length} different type(s)
+                </span>
+              )}
+              {pizzaItems.length === 0 && coldDrinks.length === 0 && toppings.length === 0 && (
                 <span className="text-gray-500 italic">No items added yet</span>
               )}
             </div>

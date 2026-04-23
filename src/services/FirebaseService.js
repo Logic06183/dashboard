@@ -112,9 +112,9 @@ export const createOrder = async (orderData) => {
 export const getOrders = async () => {
   try {
     log('Fetching orders from Firestore');
-    
+
     const ordersRef = collection(db, ORDERS_COLLECTION);
-    const q = query(ordersRef, orderBy('createdAt', 'desc'));
+    const q = query(ordersRef, orderBy('createdAt', 'desc'), limit(300));
     const snapshot = await getDocs(q);
     
     const orders = [];
@@ -642,8 +642,8 @@ export const subscribeToOrders = (callback) => {
     log('Setting up real-time order subscription');
     
     const ordersRef = collection(db, ORDERS_COLLECTION);
-    const q = query(ordersRef, orderBy('createdAt', 'desc'));
-    
+    const q = query(ordersRef, orderBy('createdAt', 'desc'), limit(300));
+
     // Set up the real-time listener
     return onSnapshot(q, {
       next: (snapshot) => {
